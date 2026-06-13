@@ -1,0 +1,7 @@
+ALTER TABLE public.students
+  ADD COLUMN IF NOT EXISTS team TEXT,
+  ADD COLUMN IF NOT EXISTS service_type TEXT,
+  ADD COLUMN IF NOT EXISTS coach_name TEXT,
+  ADD COLUMN IF NOT EXISTS periodicity TEXT,
+  ADD COLUMN IF NOT EXISTS renewal_note TEXT,
+  ADD COLUMN IF NOT EXISTS payment_note TEXT;

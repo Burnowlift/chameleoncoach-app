@@ -1,0 +1,1 @@
+ALTER TABLE public.exercises DROP COLUMN IF EXISTS sbd;

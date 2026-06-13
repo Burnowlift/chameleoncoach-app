@@ -1,0 +1,19 @@
+id,scope,type,name,color,icon,is_default,created_at,updated_at
+ca4d1a3b-e783-4498-b3ed-95e2eeb6f208,empresa,income,Mensalidades de Alunos,#10b981,Users,t,2026-04-21 19:31:45.241695+00,2026-04-21 19:31:45.241695+00
+eddd4ed2-6aca-4290-a5a2-f0bf1713111a,empresa,income,Consultorias Avulsas,#14b8a6,Briefcase,t,2026-04-21 19:31:45.241695+00,2026-04-21 19:31:45.241695+00
+2afaf879-158a-49fb-bdef-907a6d934e68,empresa,income,Outras Receitas,#06b6d4,TrendingUp,t,2026-04-21 19:31:45.241695+00,2026-04-21 19:31:45.241695+00
+36a0cbb3-bbf3-4a72-8bd4-9ee81708e1ed,empresa,expense,Funcionários,#ef4444,UserCog,t,2026-04-21 19:31:45.241695+00,2026-04-21 19:31:45.241695+00
+af8842ad-baab-46b0-a999-02ed5b18f954,empresa,expense,Tráfego Pago,#f97316,Megaphone,t,2026-04-21 19:31:45.241695+00,2026-04-21 19:31:45.241695+00
+2649138c-4676-44d0-9d80-7ae8d6767757,empresa,expense,Edição de Vídeo,#a855f7,Video,t,2026-04-21 19:31:45.241695+00,2026-04-21 19:31:45.241695+00
+12abd7b4-89f3-487d-9c35-8e540e217d10,empresa,expense,Ferramentas / Software,#6366f1,Wrench,t,2026-04-21 19:31:45.241695+00,2026-04-21 19:31:45.241695+00
+0b78483c-0a40-4e12-8892-2d1fed224753,empresa,expense,Impostos,#dc2626,Receipt,t,2026-04-21 19:31:45.241695+00,2026-04-21 19:31:45.241695+00
+4178bd4b-332c-446d-9382-f4e26ac0a5bf,empresa,expense,Outras Despesas,#64748b,MoreHorizontal,t,2026-04-21 19:31:45.241695+00,2026-04-21 19:31:45.241695+00
+9e212461-5c3e-4fcc-989e-9e0535355958,pessoal,income,Salário / Pró-labore,#3b82f6,Wallet,t,2026-04-21 19:31:45.241695+00,2026-04-21 19:31:45.241695+00
+2b2c5e4d-e591-4c63-9d2e-d98ee0d22bd1,pessoal,income,Outras Entradas,#06b6d4,TrendingUp,t,2026-04-21 19:31:45.241695+00,2026-04-21 19:31:45.241695+00
+40c259ff-388a-4546-b7ad-dd3ce588a1eb,pessoal,expense,Moradia,#8b5cf6,Home,t,2026-04-21 19:31:45.241695+00,2026-04-21 19:31:45.241695+00
+8d9558db-8dd2-4b9e-a3cf-de02218eceac,pessoal,expense,Alimentação,#f59e0b,UtensilsCrossed,t,2026-04-21 19:31:45.241695+00,2026-04-21 19:31:45.241695+00
+d2fc8280-92c6-4157-b60e-5d6f156b0652,pessoal,expense,Transporte,#0ea5e9,Car,t,2026-04-21 19:31:45.241695+00,2026-04-21 19:31:45.241695+00
+b3ce711c-f9f8-4df8-b74f-3660b36b1c31,pessoal,expense,Saúde,#ec4899,Heart,t,2026-04-21 19:31:45.241695+00,2026-04-21 19:31:45.241695+00
+a2f40c40-95ea-4812-b4d1-b40dfbbd9a20,pessoal,expense,Lazer,#a855f7,Gamepad2,t,2026-04-21 19:31:45.241695+00,2026-04-21 19:31:45.241695+00
+70a48611-ce6f-4157-a5df-604a7daf53d1,pessoal,expense,Reserva de Emergência,#10b981,Shield,t,2026-04-21 19:31:45.241695+00,2026-04-21 19:31:45.241695+00
+fc1e591a-b91d-4b29-8c5b-bea1853b73cb,pessoal,expense,Outros,#64748b,MoreHorizontal,t,2026-04-21 19:31:45.241695+00,2026-04-21 19:31:45.241695+00

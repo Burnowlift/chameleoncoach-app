@@ -1,0 +1,1 @@
+ALTER TABLE public.students ADD COLUMN IF NOT EXISTS has_nutritionist boolean NOT NULL DEFAULT false;

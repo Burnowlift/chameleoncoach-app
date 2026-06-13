@@ -1,0 +1,10 @@
+project_id = "qwyyqcjqyrqxgcnwmthj"
+
+[functions.finance-chat]
+verify_jwt = false
+
+[functions.generate-recurring-transactions]
+verify_jwt = false
+
+[functions.parse-bank-statement]
+verify_jwt = false

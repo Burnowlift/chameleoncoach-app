@@ -1,0 +1,26 @@
+id,student_id,student_name,student_avatar,position,score,year,semester,acknowledged,detected_at
+e6a59626-581f-4437-b757-0ec43ccca40d,6238dd06-e129-4964-9bea-c462e5f36c15,André Marcus do Nascimento,https://qwyyqcjqyrqxgcnwmthj.supabase.co/storage/v1/object/public/avatars/6238dd06-e129-4964-9bea-c462e5f36c15/avatar.jpg?t=1779720944117,1,5,2026,1,t,2026-05-30 01:56:28.103382+00
+75223bc6-a16b-4c65-874b-f024bf287722,dc0151e3-eb4d-4ae1-a914-91cfa2e734cc,Heitor sabion,https://qwyyqcjqyrqxgcnwmthj.supabase.co/storage/v1/object/public/avatars/dc0151e3-eb4d-4ae1-a914-91cfa2e734cc/avatar.jpg?t=1779156304413,2,5,2026,1,t,2026-05-30 01:56:28.103382+00
+ab5ef1a1-75af-493b-b4c2-8481bf69d554,0c932874-b8b7-4542-a522-a5cffd9c66a9,Lucas akihito,,1,2.3,2026,1,t,2026-04-21 21:57:10.931943+00
+7d4d297c-32e4-4c0e-bb9e-f4013e30bf91,16c808ed-154a-4685-a2e4-844038f7d76c,Matheus Souza (Gordozord),https://qwyyqcjqyrqxgcnwmthj.supabase.co/storage/v1/object/public/avatars/16c808ed-154a-4685-a2e4-844038f7d76c/avatar.jpg?t=1776088315755,2,2.3,2026,1,t,2026-04-21 21:57:10.931943+00
+e4d0701a-c3de-4709-aa3f-df83bd7b6df4,16c808ed-154a-4685-a2e4-844038f7d76c,Matheus Souza (Gordozord),https://qwyyqcjqyrqxgcnwmthj.supabase.co/storage/v1/object/public/avatars/16c808ed-154a-4685-a2e4-844038f7d76c/avatar.jpg?t=1776088315755,1,3.7,2026,1,t,2026-04-21 23:18:18.470961+00
+520793f5-703b-421b-906a-73a8f6145c4a,0c932874-b8b7-4542-a522-a5cffd9c66a9,Lucas akihito,,2,2.3,2026,1,t,2026-04-21 23:18:18.470961+00
+73eec169-70aa-4194-aede-f865669f68c0,e171833f-e8d0-4b2c-884c-fda495f1019a,João Prohman,https://qwyyqcjqyrqxgcnwmthj.supabase.co/storage/v1/object/public/avatars/e171833f-e8d0-4b2c-884c-fda495f1019a/avatar.png?t=1776100542009,2,2.3,2026,1,t,2026-04-22 02:24:28.858355+00
+747fc4d4-ce1b-4dca-b1be-b06c96b8e5cd,0c932874-b8b7-4542-a522-a5cffd9c66a9,Lucas akihito,,3,2.3,2026,1,t,2026-04-22 02:24:28.858355+00
+055170ff-b7e0-4e6e-9cd9-61b091c81058,0a0bb310-eff2-4351-a82a-fd2fe286d234,Luis Carlos,,2,2.3,2026,1,t,2026-04-23 01:04:01.195187+00
+99a5e8d8-4c00-446d-9b12-32215e289f45,e171833f-e8d0-4b2c-884c-fda495f1019a,João Prohman,https://qwyyqcjqyrqxgcnwmthj.supabase.co/storage/v1/object/public/avatars/e171833f-e8d0-4b2c-884c-fda495f1019a/avatar.png?t=1776100542009,3,2.1,2026,1,t,2026-04-23 01:04:01.195187+00
+91a93e97-bf09-4411-8107-9c654eeaf12a,0a0bb310-eff2-4351-a82a-fd2fe286d234,Luis Carlos,,3,2.3,2026,1,t,2026-04-25 00:25:45.587675+00
+de5b5824-4b34-4693-9467-3f6a250902f2,0a0bb310-eff2-4351-a82a-fd2fe286d234,Luis Carlos,https://qwyyqcjqyrqxgcnwmthj.supabase.co/storage/v1/object/public/avatars/0a0bb310-eff2-4351-a82a-fd2fe286d234/avatar.jpeg?t=1777484864441,1,5,2026,1,t,2026-05-04 13:59:18.768853+00
+cc8ca66c-23d3-439d-9c46-bee2230668cb,73057fac-df99-47e3-9a98-73655103e9bb,Pedro Vitor (Russinho),https://qwyyqcjqyrqxgcnwmthj.supabase.co/storage/v1/object/public/avatars/73057fac-df99-47e3-9a98-73655103e9bb/avatar.jpeg?t=1776955009401,3,2.3,2026,1,t,2026-05-05 11:49:58.672146+00
+7138d837-1c34-4347-ae86-814b75563414,06f04d52-e719-40d3-8ca6-6d483af9f097,Lucas Marcelino,,3,2.3,2026,1,t,2026-05-06 15:30:57.72688+00
+35d2ab46-7be1-4c75-b4bf-62a8147f92d1,e171833f-e8d0-4b2c-884c-fda495f1019a,João Prohman,https://qwyyqcjqyrqxgcnwmthj.supabase.co/storage/v1/object/public/avatars/e171833f-e8d0-4b2c-884c-fda495f1019a/avatar.png?t=1776100542009,1,5,2026,1,t,2026-05-17 16:30:05.167939+00
+2d26e339-8ef4-45f6-9582-eb9679c814ed,75061457-1a89-462a-b288-a63ce1bf59e9,Alan Rodrigues Santos,,3,2.3,2026,1,t,2026-05-19 00:16:35.461834+00
+3fa2dafc-99ae-4d51-b932-74417b3d308a,dc0151e3-eb4d-4ae1-a914-91cfa2e734cc,Heitor sabion,https://qwyyqcjqyrqxgcnwmthj.supabase.co/storage/v1/object/public/avatars/dc0151e3-eb4d-4ae1-a914-91cfa2e734cc/avatar.jpg?t=1779156304413,1,5,2026,1,t,2026-05-22 19:44:13.341869+00
+72c2a0ff-d156-4bfd-9547-4a4abf795da0,5708401f-8de5-4afc-bd85-47873cae849c,Lucas Waquim C Costa,,3,5,2026,1,t,2026-05-22 19:44:13.341869+00
+b3f71829-0e70-4ad6-bed6-9b892c8c8c6f,5708401f-8de5-4afc-bd85-47873cae849c,Lucas Waquim C Costa,,2,5,2026,1,t,2026-05-25 14:43:52.586248+00
+37d04839-ac7e-4b99-aab0-6fd4ae6067a3,16c808ed-154a-4685-a2e4-844038f7d76c,Matheus Souza (Gordozord),https://qwyyqcjqyrqxgcnwmthj.supabase.co/storage/v1/object/public/avatars/16c808ed-154a-4685-a2e4-844038f7d76c/avatar.jpg?t=1776088315755,3,4.7,2026,1,t,2026-05-25 14:43:52.586248+00
+fead427c-3134-40b4-b431-5474355e57c6,5708401f-8de5-4afc-bd85-47873cae849c,Lucas Waquim C Costa,,1,3.4,2026,1,t,2026-06-03 20:47:57.247311+00
+8e9e5b72-05ee-4456-b2ae-c0be3eb6fd20,b7570361-db11-407f-9660-4d6c9bc2d321,Felipe Garcia,,3,2.6,2026,1,t,2026-06-03 20:47:57.247311+00
+b9e343d8-bcc7-428d-94e4-7d316c79b293,6238dd06-e129-4964-9bea-c462e5f36c15,André Marcus do Nascimento,https://qwyyqcjqyrqxgcnwmthj.supabase.co/storage/v1/object/public/avatars/6238dd06-e129-4964-9bea-c462e5f36c15/avatar.jpg?t=1779720944117,3,2.6,2026,1,t,2026-06-07 13:22:50.818518+00
+f0d5f407-e58c-4150-a9d3-019c6be5bc98,b7570361-db11-407f-9660-4d6c9bc2d321,Felipe Garcia,,1,3.4,2026,1,t,2026-06-07 13:22:50.818518+00
+f3b3a39d-58d9-4d50-a563-820a83afa7b3,6238dd06-e129-4964-9bea-c462e5f36c15,André Marcus do Nascimento,https://qwyyqcjqyrqxgcnwmthj.supabase.co/storage/v1/object/public/avatars/6238dd06-e129-4964-9bea-c462e5f36c15/avatar.jpg?t=1779720944117,2,3.4,2026,1,t,2026-06-10 21:42:25.857597+00

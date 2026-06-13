@@ -1,0 +1,1 @@
+ALTER TABLE public.session_notes ADD COLUMN sender text NOT NULL DEFAULT 'student';
