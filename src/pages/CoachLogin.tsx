@@ -10,6 +10,7 @@ import { Dumbbell, Loader2, Eye, EyeOff, Mail, Lock, AlertCircle, ArrowLeft } fr
 import AnimatedPage from "@/components/AnimatedPage";
 import { Helmet } from "react-helmet-async";
 import { supabase } from "@/integrations/supabase/client";
+import { setRememberMe, clearRememberMe } from "@/lib/rememberMeStorage";
 
 const CoachLogin = () => {
   const { signIn, resetPassword } = useAuth();
@@ -38,6 +39,9 @@ const CoachLogin = () => {
     }
 
     setLoading(true);
+    // Set the remember-me preference BEFORE signing in so that
+    // Supabase stores the session tokens in the correct storage.
+    setRememberMe(remember);
     const { error: authError } = await signIn(email.trim(), password);
 
     if (authError) {
@@ -61,6 +65,7 @@ const CoachLogin = () => {
 
     if (!coach) {
       await supabase.auth.signOut();
+      clearRememberMe();
       setError("Esta conta não é de treinador. Use o login de aluno.");
       return;
     }

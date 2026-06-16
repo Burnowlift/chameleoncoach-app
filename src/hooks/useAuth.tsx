@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { clearRememberMe } from "@/lib/rememberMeStorage";
 import type { User, Session } from "@supabase/supabase-js";
 
 interface AuthContextType {
@@ -46,6 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    clearRememberMe();
     await supabase.auth.signOut();
   };
 
