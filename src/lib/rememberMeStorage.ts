@@ -1,92 +1,84 @@
 /**
- * Custom storage adapter for Supabase Auth that supports "Remember me" functionality.
+ * "Remember me" support for Supabase Auth — Safari-safe implementation.
  *
- * - When "Remember me" is checked: session tokens are stored in localStorage
- *   (persists across browser sessions).
- * - When "Remember me" is NOT checked: session tokens are stored in sessionStorage
- *   (cleared when the browser/tab is closed).
+ * Strategy: always store auth tokens in localStorage (maximum compatibility).
+ * We use a sessionStorage "canary" flag to detect new browser sessions.
+ * When the browser is closed and reopened:
+ *   - sessionStorage is cleared (by the browser)
+ *   - if "Remember me" was NOT checked, we clear the auth tokens from localStorage
+ *   - if "Remember me" WAS checked, we leave the tokens intact (auto-login)
  *
- * The preference flag itself is always stored in localStorage so that,
- * on the next visit, the client knows where to look for existing tokens.
+ * This avoids the Safari/iOS issues caused by routing auth tokens through
+ * sessionStorage directly.
  */
 
 const REMEMBER_KEY = "chameleon_remember_me";
+const SESSION_CANARY = "chameleon_session_active";
+const SUPABASE_AUTH_PREFIX = "sb-";
 
 /** Whether the user opted into "Remember me" on last login. */
 export function getRememberMe(): boolean {
-  return localStorage.getItem(REMEMBER_KEY) === "true";
+  try {
+    return localStorage.getItem(REMEMBER_KEY) === "true";
+  } catch {
+    return false;
+  }
 }
 
 /** Persist the "Remember me" preference (always in localStorage). */
 export function setRememberMe(value: boolean): void {
-  if (value) {
-    localStorage.setItem(REMEMBER_KEY, "true");
-  } else {
-    localStorage.removeItem(REMEMBER_KEY);
+  try {
+    if (value) {
+      localStorage.setItem(REMEMBER_KEY, "true");
+    } else {
+      localStorage.removeItem(REMEMBER_KEY);
+    }
+    // Mark this browser tab/session as active
+    sessionStorage.setItem(SESSION_CANARY, "1");
+  } catch {
+    // Silently fail — storage might be restricted
   }
 }
 
-/** Clear the "Remember me" flag and remove session data from both storages. */
+/** Clear the "Remember me" flag (called on explicit logout). */
 export function clearRememberMe(): void {
-  localStorage.removeItem(REMEMBER_KEY);
+  try {
+    localStorage.removeItem(REMEMBER_KEY);
+    sessionStorage.removeItem(SESSION_CANARY);
+  } catch {
+    // Silently fail
+  }
 }
 
 /**
- * A storage object that implements the Web Storage API interface
- * and delegates to localStorage or sessionStorage based on the
- * "Remember me" preference.
+ * Call this once on app startup (e.g. in main.tsx or AuthProvider).
+ *
+ * If the user did NOT check "Remember me" and this is a new browser session
+ * (sessionStorage canary is missing), we clear the Supabase auth tokens
+ * from localStorage so the user has to log in again.
  */
-export const rememberMeStorage: Storage = {
-  get length(): number {
-    return getActiveStorage().length;
-  },
+export function enforceRememberMe(): void {
+  try {
+    const remembered = getRememberMe();
+    const sessionActive = sessionStorage.getItem(SESSION_CANARY) === "1";
 
-  clear(): void {
-    // Clear auth data from both storages to avoid stale tokens
-    localStorage.clear();
-    sessionStorage.clear();
-  },
-
-  getItem(key: string): string | null {
-    // First try the active storage based on current preference
-    const active = getActiveStorage();
-    const value = active.getItem(key);
-    if (value !== null) return value;
-
-    // Fallback: check the other storage (handles edge case where
-    // user had a session in one storage and the flag changed)
-    const fallback = active === localStorage ? sessionStorage : localStorage;
-    const fallbackValue = fallback.getItem(key);
-    if (fallbackValue !== null) {
-      // Migrate to the active storage
-      active.setItem(key, fallbackValue);
-      fallback.removeItem(key);
-      return fallbackValue;
+    if (!remembered && !sessionActive) {
+      // New browser session + user didn't want to be remembered → clear auth tokens
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(SUPABASE_AUTH_PREFIX)) {
+          keysToRemove.push(key);
+        }
+      }
+      for (const key of keysToRemove) {
+        localStorage.removeItem(key);
+      }
     }
 
-    return null;
-  },
-
-  setItem(key: string, value: string): void {
-    const active = getActiveStorage();
-    active.setItem(key, value);
-
-    // Ensure the value is NOT in the other storage
-    const other = active === localStorage ? sessionStorage : localStorage;
-    other.removeItem(key);
-  },
-
-  removeItem(key: string): void {
-    // Remove from both storages to be safe
-    localStorage.removeItem(key);
-    sessionStorage.removeItem(key);
-  },
-
-  key(index: number): string | null {
-    return getActiveStorage().key(index);
-  },
-};
-
-function getActiveStorage(): Storage {
-  return getRememberMe() ? localStorage : sessionStorage;
+    // Mark this session as active (survives page reloads within the same session)
+    sessionStorage.setItem(SESSION_CANARY, "1");
+  } catch {
+    // Silently fail — some browsers restrict storage access
+  }
 }
