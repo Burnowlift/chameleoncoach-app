@@ -42,7 +42,8 @@ const StudentLogin = () => {
     // Set the remember-me preference BEFORE signing in so that
     // Supabase stores the session tokens in the correct storage.
     setRememberMe(remember);
-    const { error: authError } = await signIn(email.trim(), password);
+    const normalizedEmail = email.trim().toLowerCase();
+    const { error: authError } = await signIn(normalizedEmail, password);
 
     if (authError) {
       setLoading(false);
@@ -160,6 +161,8 @@ const StudentLogin = () => {
                     autoComplete="email"
                     aria-label="Endereço de e-mail"
                     disabled={loading}
+                    autoCapitalize="none"
+                    autoCorrect="off"
                   />
                 </div>
               </div>
@@ -178,6 +181,8 @@ const StudentLogin = () => {
                     autoComplete="current-password"
                     aria-label="Senha"
                     disabled={loading}
+                    autoCapitalize="none"
+                    autoCorrect="off"
                   />
                   <button
                     type="button"

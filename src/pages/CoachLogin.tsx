@@ -42,7 +42,8 @@ const CoachLogin = () => {
     // Set the remember-me preference BEFORE signing in so that
     // Supabase stores the session tokens in the correct storage.
     setRememberMe(remember);
-    const { error: authError } = await signIn(email.trim(), password);
+    const normalizedEmail = email.trim().toLowerCase();
+    const { error: authError } = await signIn(normalizedEmail, password);
 
     if (authError) {
       setLoading(false);
@@ -157,6 +158,8 @@ const CoachLogin = () => {
                       className="pl-10"
                       autoComplete="email"
                       disabled={loading}
+                      autoCapitalize="none"
+                      autoCorrect="off"
                     />
                   </div>
                 </div>
@@ -174,6 +177,8 @@ const CoachLogin = () => {
                       className="pl-10 pr-10"
                       autoComplete="current-password"
                       disabled={loading}
+                      autoCapitalize="none"
+                      autoCorrect="off"
                     />
                     <button
                       type="button"
