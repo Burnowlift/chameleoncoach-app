@@ -89,7 +89,7 @@ interface Props {
 }
 
 export function StudentWorkoutPage({ student, onBack }: Props) {
-  const { blocks, loading: blocksLoading, createBlock, updateBlock, deleteBlock } = useTrainingBlocks(student.id);
+  const { blocks, loading: blocksLoading, error: blocksError, createBlock, updateBlock, deleteBlock } = useTrainingBlocks(student.id);
   const { records: rmRecords, loading: rmLoading, deleteRecord: deleteRmRecord, refetch: refetchRm } = useRmHistory(student.id);
   useRmBackfill(student.id, refetchRm);
   const { logs: exerciseLogs } = useExerciseLogs(student.id);
@@ -539,6 +539,12 @@ export function StudentWorkoutPage({ student, onBack }: Props) {
       </div>
       {blocksLoading ? (
         <p className="text-center text-muted-foreground py-8">Carregando...</p>
+      ) : blocksError ? (
+        <div className="text-center py-12 rounded-lg border border-destructive/50 bg-destructive/10">
+          <p className="text-destructive font-semibold">Erro ao carregar blocos</p>
+          <p className="text-sm text-destructive/80 mt-1">{blocksError.message}</p>
+          <p className="text-xs text-muted-foreground mt-4">Verifique sua conexão ou contate o suporte técnico se o problema persistir.</p>
+        </div>
       ) : blocks.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-muted-foreground">Nenhum bloco de treino criado.</p>

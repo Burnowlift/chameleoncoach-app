@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { setRememberMe, clearRememberMe } from "@/lib/rememberMeStorage";
 
 const StudentLogin = () => {
-  const { signIn, resetPassword } = useAuth();
+  const { signIn, resetPassword, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
@@ -24,6 +24,12 @@ const StudentLogin = () => {
   const [error, setError] = useState("");
   const [mode, setMode] = useState<"login" | "forgot">("login");
   const [resetSent, setResetSent] = useState(false);
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate("/aluno");
+    }
+  }, [user, authLoading, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,10 +53,11 @@ const StudentLogin = () => {
 
     if (authError) {
       setLoading(false);
+      console.error("Login Error:", authError);
       if (authError.message.includes("Invalid login")) {
         setError("E-mail ou senha incorretos.");
       } else {
-        setError("Erro ao fazer login. Tente novamente.");
+        setError(`Erro ao fazer login: ${authError.message}`);
       }
       return;
     }

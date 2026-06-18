@@ -36,7 +36,7 @@ const StudentWorkout = () => {
   const navigate = useNavigate();
   const { students } = useStudents();
   const student = students.find((s) => s.id === studentId);
-  const { blocks, loading, createBlock, deleteBlock } = useTrainingBlocks(studentId);
+  const { blocks, loading, error, createBlock, deleteBlock } = useTrainingBlocks(studentId);
   const { logs } = useExerciseLogs(studentId);
 
   const allExerciseNames = useMemo(() => {
@@ -209,6 +209,14 @@ const StudentWorkout = () => {
 
         {loading ? (
           <p className="text-center text-muted-foreground py-8">Carregando...</p>
+        ) : error ? (
+          <Card className="border-destructive/50 bg-destructive/10">
+            <CardContent className="py-12 text-center">
+              <p className="text-destructive font-semibold">Erro ao carregar blocos</p>
+              <p className="text-sm text-destructive/80 mt-1">{error.message}</p>
+              <p className="text-xs text-muted-foreground mt-4">Verifique sua conexão ou contate o suporte técnico se o problema persistir.</p>
+            </CardContent>
+          </Card>
         ) : blocks.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">

@@ -5,15 +5,22 @@ import type { TrainingBlock, WorkoutSession } from "@/lib/mock-data";
 export function useTrainingBlocks(studentId: string | undefined) {
   const [blocks, setBlocks] = useState<TrainingBlock[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<Error | null>(null);
 
   const fetchBlocks = useCallback(async () => {
     if (!studentId) { setBlocks([]); setLoading(false); return; }
     setLoading(true);
+    setFetchError(null);
     const { data, error } = await supabase
       .from("training_blocks")
       .select("*")
       .eq("student_id", studentId)
       .order("created_at", { ascending: true });
+
+    if (error) {
+      console.error("[useTrainingBlocks] Supabase error:", error.message, error.code, error.details);
+      setFetchError(new Error(error.message));
+    }
 
     if (data) {
       setBlocks(data.map((row: any) => ({
@@ -63,5 +70,5 @@ export function useTrainingBlocks(studentId: string | undefined) {
     setBlocks(prev => prev.filter(b => b.id !== blockId));
   };
 
-  return { blocks, loading, createBlock, updateBlock, deleteBlock, refetch: fetchBlocks };
+  return { blocks, loading, error: fetchError, createBlock, updateBlock, deleteBlock, refetch: fetchBlocks };
 }

@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { clearRememberMe } from "@/lib/rememberMeStorage";
+import { clearRememberMe, getRememberMe } from "@/lib/rememberMeStorage";
 import type { User, Session } from "@supabase/supabase-js";
 
 interface AuthContextType {
@@ -21,6 +21,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // On first load of a new browser session, check if the user wanted to be remembered.
+    if (!sessionStorage.getItem('chameleon_session_started')) {
+      sessionStorage.setItem('chameleon_session_started', '1');
+      if (!getRememberMe()) {
+        supabase.auth.signOut();
+      }
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
