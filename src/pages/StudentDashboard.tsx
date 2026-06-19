@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useTrainingBlocks } from "@/hooks/useTrainingBlocks";
-import { useExerciseLogs } from "@/hooks/useExerciseLogs";
+import { useExerciseLogs, type ExerciseSetLog } from "@/hooks/useExerciseLogs";
 import { useSessionNotes } from "@/hooks/useSessionNotes";
 import { useRmHistory, calculate1RMFromRpe } from "@/hooks/useRmHistory";
 import { useRmBackfill } from "@/hooks/useRmBackfill";
@@ -223,35 +223,7 @@ const StudentDashboard = () => {
           <p className="font-semibold text-lg">{student.name}</p>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <Card><CardContent className="p-4 text-center">
-            <p className="text-xs text-muted-foreground">Total SBD</p>
-            <p className="text-xl font-bold text-primary">{formatKg(total)}</p>
-          </CardContent></Card>
-          <Card><CardContent className="p-4 text-center">
-            <p className="text-xs text-muted-foreground">Squat</p>
-            <p className="text-xl font-bold">{formatKg(student.squat1RM)}</p>
-          </CardContent></Card>
-          <Card><CardContent className="p-4 text-center">
-            <p className="text-xs text-muted-foreground">Bench</p>
-            <p className="text-xl font-bold">{formatKg(student.bench1RM)}</p>
-          </CardContent></Card>
-          <Card><CardContent className="p-4 text-center">
-            <p className="text-xs text-muted-foreground">Deadlift</p>
-            <p className="text-xl font-bold">{formatKg(student.deadlift1RM)}</p>
-          </CardContent></Card>
-        </div>
-
-        {/* Weekly Summary */}
-        {view.type === "blocks" && <WeeklySummary studentId={student.id} />}
-
-        {/* 1RM Evolution */}
-        <RmEvolutionChart records={rmRecords} loading={rmLoading} onDeleteRecord={deleteRmRecord} />
-        {student.joinedAt && (Date.now() - new Date(student.joinedAt).getTime()) < 60 * 24 * 60 * 60 * 1000 && (
-          <RpeReferenceTable />
-        )}
-        <WarmupCalculator />
+        {/* Back Button for internal views */}
         {view.type !== "blocks" && (
           <Button variant="ghost" size="sm" className="gap-1 -ml-2"
             onClick={() => view.type === "sessions" ? setView({ type: "weeks", blockId: view.blockId }) : setView({ type: "blocks" })}>
@@ -260,55 +232,78 @@ const StudentDashboard = () => {
           </Button>
         )}
 
-        {/* Tabs: Mobilidade + Treinos (apenas na visão de blocos) */}
+        {/* Blocks View Elements */}
         {view.type === "blocks" && (
-          <Tabs defaultValue="mobility" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="mobility">Minhas Mobilidades</TabsTrigger>
-              <TabsTrigger value="workouts">Meus Treinos</TabsTrigger>
-            </TabsList>
+          <>
+            <WeeklySummary studentId={student.id} />
 
-            <TabsContent value="mobility" className="mt-4">
-              <StudentMobilitySection studentId={student.id} />
-            </TabsContent>
+            <Tabs defaultValue="mobility" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="mobility">Minhas Mobilidades</TabsTrigger>
+                <TabsTrigger value="workouts">Meus Treinos</TabsTrigger>
+              </TabsList>
 
-            <TabsContent value="workouts" className="mt-4">
-              {blocksLoading ? (
-                <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-              ) : blocks.length === 0 ? (
-                <Card><CardContent className="py-12 text-center">
-                  <Dumbbell className="h-10 w-10 mx-auto text-muted-foreground/30" />
-                  <p className="text-muted-foreground mt-3">Nenhum bloco de treino disponível.</p>
-                  <p className="text-sm text-muted-foreground">Aguarde seu treinador montar seu programa.</p>
-                </CardContent></Card>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {blocks.map(block => (
-                    <Card key={block.id} className="cursor-pointer hover:border-primary/30 transition-colors"
-                      onClick={() => setView({ type: "weeks", blockId: block.id })}>
-                      <CardContent className="p-5">
-                        <div className="flex items-start gap-3">
-                          <div className="p-2 rounded-lg bg-primary/10">
-                            <Dumbbell className="h-5 w-5 text-primary" />
+              <TabsContent value="mobility" className="mt-4">
+                <StudentMobilitySection studentId={student.id} />
+              </TabsContent>
+
+              <TabsContent value="workouts" className="mt-4">
+                {blocksLoading ? (
+                  <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+                ) : blocks.length === 0 ? (
+                  <Card><CardContent className="py-12 text-center">
+                    <Dumbbell className="h-10 w-10 mx-auto text-muted-foreground/30" />
+                    <p className="text-muted-foreground mt-3">Nenhum bloco de treino disponível.</p>
+                    <p className="text-sm text-muted-foreground">Aguarde seu treinador montar seu programa.</p>
+                  </CardContent></Card>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {blocks.map(block => (
+                      <Card key={block.id} className="cursor-pointer hover:border-primary/30 transition-colors"
+                        onClick={() => setView({ type: "weeks", blockId: block.id })}>
+                        <CardContent className="p-5">
+                          <div className="flex items-start gap-3">
+                            <div className="p-2 rounded-lg bg-primary/10">
+                              <Dumbbell className="h-5 w-5 text-primary" />
+                            </div>
+                            <div>
+                              <p className="font-semibold">{block.name}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {block.frequency}x/semana • {block.duration} semanas
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-semibold">{block.name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {block.frequency}x/semana • {block.duration} semanas
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <Card><CardContent className="p-4 text-center">
+                <p className="text-xs text-muted-foreground">Total SBD</p>
+                <p className="text-xl font-bold text-primary">{formatKg(total)}</p>
+              </CardContent></Card>
+              <Card><CardContent className="p-4 text-center">
+                <p className="text-xs text-muted-foreground">Squat</p>
+                <p className="text-xl font-bold">{formatKg(student.squat1RM)}</p>
+              </CardContent></Card>
+              <Card><CardContent className="p-4 text-center">
+                <p className="text-xs text-muted-foreground">Bench</p>
+                <p className="text-xl font-bold">{formatKg(student.bench1RM)}</p>
+              </CardContent></Card>
+              <Card><CardContent className="p-4 text-center">
+                <p className="text-xs text-muted-foreground">Deadlift</p>
+                <p className="text-xl font-bold">{formatKg(student.deadlift1RM)}</p>
+              </CardContent></Card>
+            </div>
+
+            <StudentRankingSection studentId={student.id} />
+            <StrengthRankingSection highlightStudentId={student.id} compact limit={4} showSelfRow />
+          </>
         )}
-
-        {view.type === "blocks" && <StudentRankingSection studentId={student.id} />}
-        {view.type === "blocks" && <StrengthRankingSection highlightStudentId={student.id} compact limit={4} showSelfRow />}
 
         {/* Weeks View */}
         {view.type === "weeks" && currentBlock && (
@@ -353,6 +348,13 @@ const StudentDashboard = () => {
             onToggleWeekCompleted={() => toggleWeekCompleted(currentBlock.id, view.week)}
           />
         )}
+
+        {/* Common Tools for all views */}
+        <RmEvolutionChart records={rmRecords} loading={rmLoading} onDeleteRecord={deleteRmRecord} />
+        {student.joinedAt && (Date.now() - new Date(student.joinedAt).getTime()) < 60 * 24 * 60 * 60 * 1000 && (
+          <RpeReferenceTable />
+        )}
+        <WarmupCalculator />
       </main>
     </div>
   );
@@ -376,15 +378,11 @@ interface SessionsViewProps {
 function SessionsView({ student, block, week, logs, notes, onUpsertLog, onAddNote, onDeleteNote, onAddRmRecord, isWeekCompleted, onToggleWeekCompleted, onRefreshStudent }: SessionsViewProps) {
   const sessions = block.weekSessions?.[week] || block.sessions;
   const [noteInputs, setNoteInputs] = useState<Record<string, string>>({});
-  const [weightInputs, setWeightInputs] = useState<Record<string, string>>({});
+  const [setsDataInputs, setSetsDataInputs] = useState<Record<string, {weight: string, reps: string}[]>>({});
   const [videoUrls, setVideoUrls] = useState<Record<string, string>>({});
   const [exerciseTags, setExerciseTags] = useState<Record<string, ("squat" | "bench" | "deadlift")[]>>({});
   const [exerciseDbIds, setExerciseDbIds] = useState<Record<string, string>>({});
   const [openRpePopover, setOpenRpePopover] = useState<string | null>(null);
-  const [editConfirm, setEditConfirm] = useState<{ mode: "edit" | "clear"; sessionId: string; exerciseId: string; key: string; reps: number; rpe: number } | null>(null);
-  const [unlockedEdits, setUnlockedEdits] = useState<Set<string>>(new Set());
-  const weightInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
-  const suppressBlurRef = useRef<Set<string>>(new Set());
 
   // Close RPE popover automatically when user scrolls (avoids stuck overlay on mobile)
   useEffect(() => {
@@ -435,16 +433,23 @@ function SessionsView({ student, block, week, logs, notes, onUpsertLog, onAddNot
       });
   }, [sessions]);
 
-  // Initialize weight inputs from existing logs
+  // Initialize sets inputs from existing logs
   useEffect(() => {
-    const initial: Record<string, string> = {};
+    const initial: Record<string, {weight: string, reps: string}[]> = {};
     logs.forEach(log => {
       if (log.blockId === block.id && log.weekNumber === week) {
         const key = `${log.sessionId}-${log.exerciseId}`;
-        initial[key] = log.weight > 0 ? String(log.weight) : "";
+        if (log && log.setsData && log.setsData.length > 0) {
+          initial[key] = log.setsData.map(s => ({
+            weight: s?.weight ? String(s.weight) : "",
+            reps: s?.reps ? String(s.reps) : ""
+          }));
+        } else if (log && log.weight > 0) {
+          initial[key] = [{ weight: String(log.weight), reps: "" }];
+        }
       }
     });
-    setWeightInputs(prev => ({ ...initial, ...prev }));
+    setSetsDataInputs(prev => ({ ...initial, ...prev }));
   }, [logs, block.id, week]);
 
   const getLog = (sessionId: string, exerciseId: string) =>
@@ -453,14 +458,25 @@ function SessionsView({ student, block, week, logs, notes, onUpsertLog, onAddNot
   const getSessionNotes = (sessionId: string) =>
     notes.filter(n => n.blockId === block.id && n.weekNumber === week && n.sessionId === sessionId);
 
-  const commitWeight = async (
+  const commitSetsData = async (
     sessionId: string,
     exerciseId: string,
-    weight: number,
-    repsFromExercise?: number,
-    rpeFromExercise?: number,
+    setsData: {weight: string, reps: string}[],
+    expectedRepsFromExercise?: number
   ) => {
     const log = getLog(sessionId, exerciseId);
+    
+    const parsedSetsData: ExerciseSetLog[] = setsData
+      .map((s, i) => ({
+        setIndex: i + 1,
+        weight: Number(s.weight) || 0,
+        reps: Number(s.reps) || 0
+      }))
+      .filter(s => s.weight > 0);
+
+    const maxWeight = parsedSetsData.reduce((max, s) => Math.max(max, s.weight), 0);
+    const isCompleted = parsedSetsData.length > 0;
+
     try {
       await onUpsertLog({
         studentId: student.id,
@@ -468,29 +484,43 @@ function SessionsView({ student, block, week, logs, notes, onUpsertLog, onAddNot
         weekNumber: week,
         sessionId,
         exerciseId,
-        weight,
+        weight: maxWeight,
         notes: log?.notes ?? null,
-        completed: weight > 0,
-        actualRpe: weight > 0 ? (log?.actualRpe ?? null) : null,
+        completed: isCompleted,
+        actualRpe: isCompleted ? (log?.actualRpe ?? null) : null,
+        setsData: parsedSetsData
       });
 
-      if (weight > 0) {
+      if (isCompleted) {
         const tags = exerciseTags[exerciseId] || [];
-        const perceivedRpe = log?.actualRpe ?? rpeFromExercise ?? null;
+        const perceivedRpe = log?.actualRpe ?? null;
         const tableRpe = perceivedRpe != null ? snapToTableRpe(perceivedRpe) : null;
+        
         if (tags.length > 0 && tableRpe != null) {
-          const reps = repsFromExercise || 1;
           for (const tag of tags) {
-            const estimated1rm = calculate1RMFromRpe(tag, weight, reps, tableRpe);
-            if (estimated1rm > 0) {
+            let maxEst1rm = 0;
+            let bestWeight = 0;
+            let bestReps = 0;
+
+            for (const s of parsedSetsData) {
+              const repsToUse = s.reps > 0 ? s.reps : (expectedRepsFromExercise || 1);
+              const est = calculate1RMFromRpe(tag, s.weight, repsToUse, tableRpe);
+              if (est > maxEst1rm) {
+                maxEst1rm = est;
+                bestWeight = s.weight;
+                bestReps = repsToUse;
+              }
+            }
+
+            if (maxEst1rm > 0) {
               try {
                 await onAddRmRecord({
                   studentId: student.id,
                   exerciseId: exerciseDbIds[exerciseId] || exerciseId,
                   sbdType: tag,
-                  weight,
-                  reps,
-                  estimated1rm,
+                  weight: bestWeight,
+                  reps: bestReps,
+                  estimated1rm: maxEst1rm,
                 });
               } catch { /* silently fail rm record */ }
             }
@@ -499,12 +529,8 @@ function SessionsView({ student, block, week, logs, notes, onUpsertLog, onAddNot
         }
       }
 
-      if (weight === 0) {
-        toast.success("Carga removida.");
-      } else {
-        toast.success(log && log.weight > 0 ? "Carga atualizada!" : "Carga registrada!");
-      }
-    } catch { toast.error("Erro ao salvar carga."); }
+      toast.success(isCompleted ? "Cargas registradas!" : "Cargas removidas.");
+    } catch { toast.error("Erro ao salvar cargas."); }
   };
 
 
@@ -512,11 +538,29 @@ function SessionsView({ student, block, week, logs, notes, onUpsertLog, onAddNot
     sessionId: string,
     exerciseId: string,
     rpe: number | null,
-    repsFromExercise?: number,
+    expectedRepsFromExercise?: number,
   ) => {
     const key = `${sessionId}-${exerciseId}`;
     const existingLog = getLog(sessionId, exerciseId);
-    const weight = Number(weightInputs[key]) || existingLog?.weight || 0;
+    
+    let parsedSetsData: ExerciseSetLog[] = [];
+    if (setsDataInputs[key] && setsDataInputs[key].length > 0) {
+      parsedSetsData = setsDataInputs[key]
+        .map((s, i) => ({
+          setIndex: i + 1,
+          weight: Number(s.weight) || 0,
+          reps: Number(s.reps) || 0
+        }))
+        .filter(s => s.weight > 0);
+    } else if (existingLog?.setsData && existingLog.setsData.length > 0) {
+      parsedSetsData = existingLog.setsData;
+    } else if (existingLog?.weight && existingLog.weight > 0) {
+      parsedSetsData = [{ setIndex: 1, weight: existingLog.weight, reps: 0 }];
+    }
+
+    const maxWeight = parsedSetsData.reduce((max, s) => Math.max(max, s.weight), 0);
+    const isCompleted = parsedSetsData.length > 0;
+
     try {
       await onUpsertLog({
         studentId: student.id,
@@ -524,28 +568,40 @@ function SessionsView({ student, block, week, logs, notes, onUpsertLog, onAddNot
         weekNumber: week,
         sessionId,
         exerciseId,
-        weight,
+        weight: maxWeight,
         notes: existingLog?.notes ?? null,
-        completed: existingLog?.completed ?? false,
+        completed: isCompleted || (existingLog?.completed ?? false),
         actualRpe: rpe,
+        setsData: parsedSetsData,
       });
 
-      // Recalcula 1RM usando o RPE PERCEBIDO recém-marcado (auto-PR) para cada tag.
       const tags = exerciseTags[exerciseId] || [];
       const tableRpe = rpe != null ? snapToTableRpe(rpe) : null;
-      if (tags.length > 0 && weight > 0 && tableRpe != null) {
-        const reps = repsFromExercise || 1;
+      if (tags.length > 0 && isCompleted && tableRpe != null) {
         for (const tag of tags) {
-          const estimated1rm = calculate1RMFromRpe(tag, weight, reps, tableRpe);
-          if (estimated1rm > 0) {
+          let maxEst1rm = 0;
+          let bestWeight = 0;
+          let bestReps = 0;
+
+          for (const s of parsedSetsData) {
+            const repsToUse = s.reps > 0 ? s.reps : (expectedRepsFromExercise || 1);
+            const est = calculate1RMFromRpe(tag, s.weight, repsToUse, tableRpe);
+            if (est > maxEst1rm) {
+              maxEst1rm = est;
+              bestWeight = s.weight;
+              bestReps = repsToUse;
+            }
+          }
+
+          if (maxEst1rm > 0) {
             try {
               await onAddRmRecord({
                 studentId: student.id,
                 exerciseId: exerciseDbIds[exerciseId] || exerciseId,
                 sbdType: tag,
-                weight,
-                reps,
-                estimated1rm,
+                weight: bestWeight,
+                reps: bestReps,
+                estimated1rm: maxEst1rm,
               });
             } catch { /* silently */ }
           }
@@ -619,56 +675,58 @@ function SessionsView({ student, block, week, logs, notes, onUpsertLog, onAddNot
                       </span>
                     </div>
                     <div className="space-y-2">
-                      <div className="relative w-full">
-                        <Weight className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          ref={(el) => { weightInputRefs.current[key] = el; }}
-                          type="number"
-                          inputMode="decimal"
-                          placeholder="Carga (kg)"
-                          className={`h-11 sm:h-9 text-base sm:text-sm pl-8 pr-9 w-full ${log && log.weight > 0 ? "border-green-500/60 focus-visible:ring-green-500/30" : ""}`}
-                          value={weightInputs[key] || ""}
-                          onChange={(e) => setWeightInputs(prev => ({ ...prev, [key]: e.target.value }))}
-                          onFocus={(e) => {
-                            if (log && log.weight > 0 && !unlockedEdits.has(key)) {
-                              suppressBlurRef.current.add(key);
-                              e.target.blur();
-                              setEditConfirm({ mode: "edit", sessionId: session.id, exerciseId: ex.id, key, reps: Number(ex.reps) || 1, rpe: Number(ex.rpe) || 0 });
-                            }
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              (e.currentTarget as HTMLInputElement).blur();
-                            }
-                          }}
-                          onBlur={() => {
-                            if (suppressBlurRef.current.has(key)) {
-                              suppressBlurRef.current.delete(key);
-                              return;
-                            }
-                            const raw = (weightInputs[key] ?? "").trim();
-                            const currentWeight = log?.weight ?? 0;
-                            if (raw === "") {
-                              if (currentWeight > 0) {
-                                suppressBlurRef.current.add(key);
-                                setEditConfirm({ mode: "clear", sessionId: session.id, exerciseId: ex.id, key, reps: Number(ex.reps) || 1, rpe: Number(ex.rpe) || 0 });
-                              }
-                              return;
-                            }
-                            const num = Number(raw);
-                            if (!Number.isFinite(num) || num <= 0) return;
-                            if (num === currentWeight) {
-                              setUnlockedEdits(prev => { const n = new Set(prev); n.delete(key); return n; });
-                              return;
-                            }
-                            commitWeight(session.id, ex.id, num, Number(ex.reps) || 1, Number(ex.rpe) || 0);
-                            setUnlockedEdits(prev => { const n = new Set(prev); n.delete(key); return n; });
-                          }}
-                        />
-                        {log && log.weight > 0 && (
-                          <Check className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-green-600" aria-label="Carga salva" />
-                        )}
+                      <div className="space-y-2">
+                        {Array.from({ length: Number(ex.sets) || 1 }).map((_, i) => {
+                          const setInputs = setsDataInputs[key] || [];
+                          const currentSet = setInputs[i] || { weight: "", reps: "" };
+                          return (
+                            <div key={i} className="flex gap-2 items-center">
+                              <span className="text-xs font-medium text-muted-foreground w-12 shrink-0">Série {i + 1}</span>
+                              <div className="relative flex-1">
+                                <Weight className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                                <Input
+                                  type="number"
+                                  inputMode="decimal"
+                                  placeholder="Carga (kg)"
+                                  className={`h-10 sm:h-9 text-base sm:text-sm pl-7 pr-2 w-full ${currentSet.weight ? "border-green-500/60 focus-visible:ring-green-500/30" : ""}`}
+                                  value={currentSet.weight}
+                                  onChange={(e) => {
+                                    const newVal = e.target.value;
+                                    setSetsDataInputs(prev => {
+                                      const arr = [...(prev[key] || [])];
+                                      while (arr.length <= i) arr.push({ weight: "", reps: "" });
+                                      arr[i] = { ...arr[i], weight: newVal };
+                                      return { ...prev, [key]: arr };
+                                    });
+                                  }}
+                                  onBlur={() => commitSetsData(session.id, ex.id, setsDataInputs[key] || [], Number(ex.reps) || 1)}
+                                />
+                                {currentSet.weight && (
+                                  <Check className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-green-600" />
+                                )}
+                              </div>
+                              <div className="relative flex-[0.7]">
+                                <Input
+                                  type="number"
+                                  inputMode="decimal"
+                                  placeholder="Reps"
+                                  className="h-10 sm:h-9 text-base sm:text-sm px-2 w-full"
+                                  value={currentSet.reps}
+                                  onChange={(e) => {
+                                    const newVal = e.target.value;
+                                    setSetsDataInputs(prev => {
+                                      const arr = [...(prev[key] || [])];
+                                      while (arr.length <= i) arr.push({ weight: "", reps: "" });
+                                      arr[i] = { ...arr[i], reps: newVal };
+                                      return { ...prev, [key]: arr };
+                                    });
+                                  }}
+                                  onBlur={() => commitSetsData(session.id, ex.id, setsDataInputs[key] || [], Number(ex.reps) || 1)}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                       <Popover
                         open={openRpePopover === key}
@@ -811,66 +869,6 @@ function SessionsView({ student, block, week, logs, notes, onUpsertLog, onAddNot
         <CheckCircle2 className="h-5 w-5" />
         {isWeekCompleted ? "Semana concluída ✓" : "Semana concluída"}
       </Button>
-
-      <AlertDialog
-        open={!!editConfirm}
-        onOpenChange={(open) => {
-          if (!open) {
-            if (editConfirm) {
-              const log = getLog(editConfirm.sessionId, editConfirm.exerciseId);
-              setWeightInputs(prev => ({ ...prev, [editConfirm.key]: log && log.weight > 0 ? String(log.weight) : "" }));
-              suppressBlurRef.current.delete(editConfirm.key);
-            }
-            setEditConfirm(null);
-          }
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {editConfirm?.mode === "clear" ? "Remover a carga registrada?" : "Alterar a carga deste exercício?"}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {editConfirm?.mode === "clear"
-                ? "Você apagou o campo. Deseja remover a carga salva deste exercício?"
-                : "Tem certeza que deseja alterar a carga registrada? A nova carga digitada substituirá a anterior."}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              onClick={() => {
-                if (!editConfirm) return;
-                const log = getLog(editConfirm.sessionId, editConfirm.exerciseId);
-                setWeightInputs(prev => ({ ...prev, [editConfirm.key]: log && log.weight > 0 ? String(log.weight) : "" }));
-                suppressBlurRef.current.delete(editConfirm.key);
-                setEditConfirm(null);
-              }}
-            >
-              Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={async () => {
-                if (!editConfirm) return;
-                const ec = editConfirm;
-                setEditConfirm(null);
-                suppressBlurRef.current.delete(ec.key);
-                if (ec.mode === "clear") {
-                  setWeightInputs(prev => ({ ...prev, [ec.key]: "" }));
-                  await commitWeight(ec.sessionId, ec.exerciseId, 0, ec.reps, ec.rpe);
-                } else {
-                  setUnlockedEdits(prev => new Set(prev).add(ec.key));
-                  setTimeout(() => {
-                    const el = weightInputRefs.current[ec.key];
-                    if (el) { el.focus(); el.select(); }
-                  }, 50);
-                }
-              }}
-            >
-              {editConfirm?.mode === "clear" ? "Sim, remover" : "Sim, alterar"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
     </div>
   );

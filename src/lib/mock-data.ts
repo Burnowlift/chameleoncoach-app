@@ -19,6 +19,10 @@ export interface Student {
   userId?: string | null;
   sex?: "M" | "F" | null;
   bodyWeight?: number | null;
+  mobilityInfo?: {
+    sessionCount?: number;
+    sessionNames?: Record<number, string>;
+  };
 }
 
 export interface TrainingBlock {

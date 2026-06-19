@@ -49,39 +49,21 @@ export default function Ranking() {
           <CardContent className="p-4 pt-0 space-y-4 text-sm">
             <div>
               <p className="font-medium text-foreground mb-1 flex items-center gap-1.5">
-                <Plus className="h-3.5 w-3.5 text-primary" /> Como se ganha pontos
+                <Plus className="h-3.5 w-3.5 text-primary" /> Como se ganha XP
               </p>
               <ul className="space-y-1 text-muted-foreground list-disc list-inside">
-                <li>Pontuação de <strong>1.0 a 5.0</strong>, calculada na <strong>janela móvel dos últimos 7 dias</strong>.</li>
-                <li><strong>42,5%</strong> — cargas registradas nos treinos prescritos.</li>
-                <li><strong>42,5%</strong> — mobilidade marcada como concluída.</li>
-                <li><strong>15%</strong> — comunicação com o treinador (meta: mensagens em 3 dias diferentes na semana).</li>
+                <li>O ranking soma seus pontos acumulados ao longo de todo o <strong>semestre atual</strong>.</li>
+                <li><strong>10 XP</strong> por cada exercício com a carga preenchida no aplicativo.</li>
+                <li><strong>5 XP</strong> por cada item de mobilidade marcado como concluído.</li>
+                <li><strong>7 XP</strong> por cada dia em que você enviou uma mensagem de feedback ao treinador.</li>
               </ul>
             </div>
 
-            <div>
-              <p className="font-medium text-foreground mb-1 flex items-center gap-1.5">
-                <Minus className="h-3.5 w-3.5 text-destructive" /> Como se perde pontos
-              </p>
-              <ul className="space-y-1 text-muted-foreground list-disc list-inside">
-                <li>
-                  <strong>Mobilidade não feita no dia:</strong> cada dia da janela em que o aluno tem mobilidade prescrita
-                  e não registra nenhum item desconta <strong>−0,3 pt</strong> (até o teto de <strong>−1,5 pt</strong>).
-                </li>
-                <li>
-                  <strong>Inatividade total:</strong> dias consecutivos no fim da janela <em>sem nenhum</em> registro
-                  (treino, mobilidade ou mensagem). Os <strong>2 primeiros dias são tolerados</strong> como descanso;
-                  a partir do 3º dia desconta <strong>−0,3 pt por dia</strong> (até o teto de <strong>−1,5 pt</strong>).
-                </li>
-                <li>O score final nunca cai abaixo de <strong>1.0</strong>, mesmo com penalidades acumuladas.</li>
-              </ul>
-              <div className="mt-2 flex gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-foreground/80">
-                <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0 mt-0.5" />
-                <span>
-                  Voltar a treinar e fazer mobilidade dentro da janela de 7 dias <strong>recupera os pontos automaticamente</strong>
-                  — penalidades são recalculadas a cada atualização.
-                </span>
-              </div>
+            <div className="mt-2 flex gap-2 rounded-md border border-primary/30 bg-primary/10 p-2 text-xs text-foreground/80">
+              <Trophy className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
+              <span>
+                A corrida pelo topo reseta a cada 6 meses! Não há penalidades, quem treinar e registrar mais, ganha!
+              </span>
             </div>
 
             <p className="text-xs text-muted-foreground">

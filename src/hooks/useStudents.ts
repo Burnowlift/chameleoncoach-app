@@ -23,6 +23,7 @@ const mapRow = (row: any): Student => ({
   userId: row.user_id ?? null,
   sex: (row.sex as "M" | "F" | null) ?? null,
   bodyWeight: row.body_weight_kg != null ? Number(row.body_weight_kg) : null,
+  mobilityInfo: row.mobility_info || undefined,
 });
 
 export function useStudents() {
@@ -57,6 +58,7 @@ export function useStudents() {
       has_nutritionist: student.hasNutritionist ?? false,
       sex: student.sex ?? null,
       body_weight_kg: student.bodyWeight ?? null,
+      mobility_info: student.mobilityInfo ?? null,
       request_id: requestId ?? null,
     }).select("id").maybeSingle();
     if (error) {
@@ -99,6 +101,7 @@ export function useStudents() {
       has_nutritionist: student.hasNutritionist ?? false,
       sex: student.sex ?? null,
       body_weight_kg: student.bodyWeight ?? null,
+      mobility_info: student.mobilityInfo ?? null,
     }).eq("id", student.id);
     if (error) throw error;
     await fetch();

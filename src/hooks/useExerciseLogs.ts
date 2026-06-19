@@ -1,6 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
+export interface ExerciseSetLog {
+  setIndex: number;
+  weight: number;
+  reps: number;
+}
+
 export interface ExerciseLog {
   id: string;
   studentId: string;
@@ -12,6 +18,7 @@ export interface ExerciseLog {
   notes: string | null;
   completed: boolean;
   actualRpe: number | null;
+  setsData?: ExerciseSetLog[];
   createdAt: string;
 }
 
@@ -47,6 +54,7 @@ export function useExerciseLogs(studentId: string | undefined, blockId?: string)
         notes: r.notes,
         completed: r.completed,
         actualRpe: r.actual_rpe !== null && r.actual_rpe !== undefined ? Number(r.actual_rpe) : null,
+        setsData: Array.isArray(r.sets_data) ? r.sets_data : [],
         createdAt: r.created_at,
       })));
     }
@@ -64,7 +72,8 @@ export function useExerciseLogs(studentId: string | undefined, blockId?: string)
           notes: log.notes,
           completed: log.completed,
           actual_rpe: log.actualRpe,
-        } as any)
+          sets_data: log.setsData as any,
+        })
         .eq("student_id", log.studentId)
         .eq("block_id", log.blockId)
         .eq("week_number", log.weekNumber)
@@ -83,7 +92,8 @@ export function useExerciseLogs(studentId: string | undefined, blockId?: string)
         notes: log.notes,
         completed: log.completed,
         actual_rpe: log.actualRpe,
-      } as any).select().single();
+        sets_data: log.setsData as any,
+      }).select().single();
       if (error) throw error;
       if (data) {
         const row: any = data;
@@ -98,6 +108,7 @@ export function useExerciseLogs(studentId: string | undefined, blockId?: string)
           notes: row.notes,
           completed: row.completed,
           actualRpe: row.actual_rpe !== null && row.actual_rpe !== undefined ? Number(row.actual_rpe) : null,
+          setsData: Array.isArray(row.sets_data) ? row.sets_data : [],
           createdAt: row.created_at,
         }]);
       }

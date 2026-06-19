@@ -4,7 +4,7 @@ import { CoachLayout } from "@/components/CoachLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Calendar, TrendingUp, LibraryBig, Pencil, Check, X } from "lucide-react";
+import { ArrowLeft, Calendar, TrendingUp, LibraryBig, Pencil, Check, X, MessageSquare } from "lucide-react";
 import { DeleteWeekButton } from "@/components/DeleteWeekButton";
 import { Input } from "@/components/ui/input";
 import { WeekNotesCard } from "@/components/WeekNotesCard";
@@ -23,6 +23,7 @@ import {
 import { useStudents } from "@/hooks/useStudents";
 import { useTrainingBlocks } from "@/hooks/useTrainingBlocks";
 import { useExerciseLogs } from "@/hooks/useExerciseLogs";
+import { useSessionNotes } from "@/hooks/useSessionNotes";
 import { useWorkoutTemplates } from "@/hooks/useWorkoutTemplates";
 import { supabase } from "@/integrations/supabase/client";
 import { calculate1RM, snapToTableRpe, type LiftType } from "@/lib/rpe-tables";
@@ -52,6 +53,7 @@ const BlockWeeks = () => {
   const { blocks, loading, updateBlock } = useTrainingBlocks(studentId);
   const block = blocks.find((b) => b.id === blockId);
   const { logs } = useExerciseLogs(studentId, blockId);
+  const { notes } = useSessionNotes(studentId, blockId);
   const { templates } = useWorkoutTemplates();
   const [loadingTemplate, setLoadingTemplate] = useState(false);
   const [openTplDialog, setOpenTplDialog] = useState(false);
@@ -367,6 +369,32 @@ const BlockWeeks = () => {
                   {blockId && studentId && (
                     <WeekNotesCard blockId={blockId} studentId={studentId} weekNumber={weekNum} />
                   )}
+
+                  {(() => {
+                    const studentNotes = notes.filter(n => n.weekNumber === weekNum && n.sender === "student");
+                    return (
+                      <div className="mt-3 rounded-md border border-border bg-amber-500/5 p-3" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-amber-600 mb-2">
+                          <MessageSquare className="h-3 w-3" /> Mensagens do Aluno
+                        </div>
+                        {studentNotes.length === 0 ? (
+                          <p className="text-xs text-muted-foreground italic">O aluno não enviou mensagens nesta semana.</p>
+                        ) : (
+                          <div className="space-y-2 max-h-[100px] overflow-y-auto pr-1">
+                            {studentNotes.map(note => {
+                              const sessName = block.sessions.find(s => s.id === note.sessionId)?.name || "Desconhecida";
+                              return (
+                                <div key={note.id} className="bg-background/80 rounded-md p-2 text-xs border border-amber-500/10">
+                                  <p className="text-foreground">{note.message}</p>
+                                  <p className="text-[9px] text-muted-foreground mt-1 font-mono">Sessão: {sessName}</p>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   <p className="text-xs text-muted-foreground mt-2">Clique para editar as sessões</p>
                 </CardContent>

@@ -197,7 +197,16 @@ export function StudentWorkoutPage({ student, onBack }: Props) {
       .forEach(log => {
         const meta = exMeta[log.exerciseId];
         if (!meta || !meta.lift || !meta.reps || !meta.sets) return;
-        tonnage[meta.lift] += log.weight * meta.sets * meta.reps;
+        
+        if (log.setsData && log.setsData.length > 0) {
+          const actualVolume = log.setsData.reduce((sum, s) => {
+            if (!s) return sum;
+            return sum + ((Number(s.weight) || 0) * (Number(s.reps) || meta.reps));
+          }, 0);
+          tonnage[meta.lift] += actualVolume;
+        } else {
+          tonnage[meta.lift] += log.weight * meta.sets * meta.reps;
+        }
       });
     return { sbd, tonnage, muscle };
   };
@@ -235,8 +244,17 @@ export function StudentWorkoutPage({ student, onBack }: Props) {
         if (info.isBenchRm) lifts.push("bench");
         if (info.isDeadliftRm) lifts.push("deadlift");
         lifts.forEach(lift => {
-          const est = calculate1RM(lift, log.weight, meta.reps, tableRpe);
-          if (est > (best[lift] || 0)) best[lift] = est;
+          let maxEst = 0;
+          if (log.setsData && log.setsData.length > 0) {
+            log.setsData.forEach(s => {
+              if (!s) return;
+              const est = calculate1RM(lift, Number(s.weight) || 0, Number(s.reps) || meta.reps, tableRpe);
+              if (est > maxEst) maxEst = est;
+            });
+          } else {
+            maxEst = calculate1RM(lift, log.weight, meta.reps, tableRpe);
+          }
+          if (maxEst > (best[lift] || 0)) best[lift] = maxEst;
         });
       });
 
@@ -731,6 +749,31 @@ export function StudentWorkoutPage({ student, onBack }: Props) {
                   {isCoach && currentBlock.id && student?.id && (
                     <WeekNotesCard blockId={currentBlock.id} studentId={student.id} weekNumber={i + 1} />
                   )}
+                  {isCoach && (() => {
+                    const studentNotes = notes.filter(n => n.blockId === currentBlock?.id && n.weekNumber === i + 1 && n.sender === "student");
+                    return (
+                      <div className="mt-3 rounded-md border border-border bg-amber-500/5 p-3" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-amber-600 mb-2">
+                          <MessageSquare className="h-3 w-3" /> Mensagens do Aluno
+                        </div>
+                        {studentNotes.length === 0 ? (
+                          <p className="text-xs text-muted-foreground italic">O aluno não enviou mensagens nesta semana.</p>
+                        ) : (
+                          <div className="space-y-2 max-h-[100px] overflow-y-auto pr-1">
+                            {studentNotes.map(note => {
+                              const sessName = currentBlock?.sessions.find(s => s.id === note.sessionId)?.name || "Desconhecida";
+                              return (
+                                <div key={note.id} className="bg-background/80 rounded-md p-2 text-xs border border-amber-500/10">
+                                  <p className="text-foreground">{note.message}</p>
+                                  <p className="text-[9px] text-muted-foreground mt-1 font-mono">Sessão: {sessName}</p>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </CardContent>
               </Card>
             );
@@ -884,10 +927,22 @@ export function StudentWorkoutPage({ student, onBack }: Props) {
                           {exercise.rpe && ` @RPE${exercise.rpe}`}
                           {exercise.percentage && ` ${exercise.percentage}`}
                         </span>
-                        {log?.completed && log.weight > 0 && (
-                          <Badge variant="outline" className="text-[9px] py-0 px-1 gap-0.5 border-primary/30 text-primary">
-                            <Weight className="h-2.5 w-2.5" />{formatKg(log.weight)}
-                          </Badge>
+                        {log?.completed && (
+                          <div className="flex flex-wrap justify-end gap-1">
+                            {log.setsData && log.setsData.length > 0 ? (
+                              log.setsData.map((s, i) => (
+                                s ? (
+                                  <Badge key={i} variant="outline" className="text-[9px] py-0 px-1 gap-0.5 border-primary/30 text-primary">
+                                    <Weight className="h-2 w-2" />{formatKg(Number(s.weight) || 0)} x {Number(s.reps) || 0}
+                                  </Badge>
+                                ) : null
+                              ))
+                            ) : log.weight > 0 ? (
+                              <Badge variant="outline" className="text-[9px] py-0 px-1 gap-0.5 border-primary/30 text-primary">
+                                <Weight className="h-2.5 w-2.5" />{formatKg(log.weight)}
+                              </Badge>
+                            ) : null}
+                          </div>
                         )}
                         {log?.actualRpe != null && (
                           <Badge variant="outline" className={`text-[9px] py-0 px-1 gap-0.5 ${rpeColor}`}>

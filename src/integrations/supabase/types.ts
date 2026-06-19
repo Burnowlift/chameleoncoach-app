@@ -226,6 +226,7 @@ export type Database = {
           student_id: string
           week_number: number
           weight: number
+          sets_data: Json | null
         }
         Insert: {
           actual_rpe?: number | null
@@ -239,6 +240,7 @@ export type Database = {
           student_id: string
           week_number: number
           weight?: number
+          sets_data?: Json | null
         }
         Update: {
           actual_rpe?: number | null
@@ -252,6 +254,7 @@ export type Database = {
           student_id?: string
           week_number?: number
           weight?: number
+          sets_data?: Json | null
         }
         Relationships: [
           {
@@ -1029,6 +1032,7 @@ export type Database = {
           team: string | null
           updated_at: string
           user_id: string | null
+          mobility_info: Json | null
         }
         Insert: {
           avatar?: string | null

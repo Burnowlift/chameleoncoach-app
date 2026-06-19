@@ -22,14 +22,12 @@ const MAX_SESSIONS = 7;
 const StudentMobility = () => {
   const { studentId } = useParams();
   const navigate = useNavigate();
-  const { students } = useStudents();
+  const { students, update } = useStudents();
   const student = students.find((s) => s.id === studentId);
   const { items, loading, addItem, updateItem, removeItem, applyTemplate } = useStudentMobility(studentId);
   const { items: catalog } = useMobilityCatalog();
   const { templates, loading: loadingTemplates } = useMobilityTemplates();
 
-  const storageKey = `mobility-sessions-${studentId ?? ""}`;
-  const namesKey = `mobility-session-names-${studentId ?? ""}`;
   const [sessionCount, setSessionCount] = useState<number>(0);
   const [configOpen, setConfigOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState<number>(3);
@@ -37,19 +35,14 @@ const StudentMobility = () => {
   const [renamingSession, setRenamingSession] = useState<number | null>(null);
   const [renameValue, setRenameValue] = useState("");
 
-  // Initialize from items or localStorage
+  // Initialize from student metadata
   useEffect(() => {
-    if (!studentId) return;
-    const stored = Number(localStorage.getItem(storageKey) || "0");
+    if (!student) return;
+    const dbSessionCount = student.mobilityInfo?.sessionCount || 0;
     const fromItems = items.reduce((m, i) => Math.max(m, i.sessionIndex), 0);
-    setSessionCount(Math.max(stored, fromItems));
-    try {
-      const raw = localStorage.getItem(namesKey);
-      if (raw) setSessionNames(JSON.parse(raw));
-    } catch {
-      // ignore
-    }
-  }, [studentId, items, storageKey, namesKey]);
+    setSessionCount(Math.max(dbSessionCount, fromItems));
+    setSessionNames(student.mobilityInfo?.sessionNames || {});
+  }, [student, items]);
 
   const labelFor = (sessionNum: number) =>
     sessionNames[sessionNum]?.trim() || `Mob ${SESSION_LABELS[sessionNum - 1] ?? sessionNum}`;
@@ -59,14 +52,23 @@ const StudentMobility = () => {
     setRenameValue(sessionNames[sessionNum] ?? "");
   };
 
-  const saveRename = () => {
-    if (renamingSession == null) return;
+  const saveRename = async () => {
+    if (renamingSession == null || !student) return;
     const next = { ...sessionNames };
     const trimmed = renameValue.trim();
     if (trimmed) next[renamingSession] = trimmed;
     else delete next[renamingSession];
     setSessionNames(next);
-    localStorage.setItem(namesKey, JSON.stringify(next));
+    
+    // Save to DB
+    await update({
+      ...student,
+      mobilityInfo: {
+        sessionCount,
+        sessionNames: next
+      }
+    });
+    
     setRenamingSession(null);
     toast.success("Sessão renomeada!");
   };
@@ -141,10 +143,17 @@ const StudentMobility = () => {
     catch { toast.error("Erro ao remover."); }
   };
 
-  const handleConfirmConfig = () => {
+  const handleConfirmConfig = async () => {
+    if (!student) return;
     const n = Math.max(1, Math.min(MAX_SESSIONS, pendingCount));
     setSessionCount(n);
-    localStorage.setItem(storageKey, String(n));
+    await update({
+      ...student,
+      mobilityInfo: {
+        sessionCount: n,
+        sessionNames
+      }
+    });
     setConfigOpen(false);
     toast.success(`Protocolo com ${n} sessão${n > 1 ? "es" : ""} de mobilidade.`);
   };
@@ -164,15 +173,22 @@ const StudentMobility = () => {
       if (result) {
         const n = Math.max(1, Math.min(MAX_SESSIONS, result.sessionCount || 1));
         setSessionCount(n);
-        localStorage.setItem(storageKey, String(n));
-        // Convert string keys to number keys for local state
         const namesObj: Record<number, string> = {};
         Object.entries(result.sessionNames || {}).forEach(([k, v]) => {
           const num = Number(k);
           if (!Number.isNaN(num) && typeof v === "string") namesObj[num] = v;
         });
         setSessionNames(namesObj);
-        localStorage.setItem(namesKey, JSON.stringify(namesObj));
+        
+        if (student) {
+          await update({
+            ...student,
+            mobilityInfo: {
+              sessionCount: n,
+              sessionNames: namesObj
+            }
+          });
+        }
       }
       toast.success("Template aplicado!");
       setPendingTemplateId(null);

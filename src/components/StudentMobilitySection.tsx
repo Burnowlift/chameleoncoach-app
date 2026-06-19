@@ -7,6 +7,7 @@ import { Activity, Play, Loader2, Layers, ChevronDown } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Progress } from "@/components/ui/progress";
 import { useStudentMobility } from "@/hooks/useMobility";
+import { useStudents } from "@/hooks/useStudents";
 
 interface Props {
   studentId: string;
@@ -14,6 +15,8 @@ interface Props {
 
 export function StudentMobilitySection({ studentId }: Props) {
   const { items, loading, isDoneToday, toggleDoneToday } = useStudentMobility(studentId);
+  const { students } = useStudents();
+  const student = students.find(s => s.id === studentId);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const handleToggle = async (id: string) => {
@@ -64,13 +67,7 @@ export function StudentMobilitySection({ studentId }: Props) {
         {Array.from(new Set(items.map(i => i.sessionIndex))).sort((a, b) => a - b).map((sessionNum) => {
           const sessionItems = items.filter(i => i.sessionIndex === sessionNum).sort((a, b) => a.position - b.position);
           const defaultLabel = `Mob ${["A", "B", "C", "D", "E", "F", "G"][sessionNum - 1] || sessionNum}`;
-          let customLabel = "";
-          try {
-            const raw = localStorage.getItem(`mobility-session-names-${studentId}`);
-            if (raw) customLabel = (JSON.parse(raw)?.[sessionNum] ?? "").toString().trim();
-          } catch {
-            // ignore
-          }
+          const customLabel = student?.mobilityInfo?.sessionNames?.[sessionNum]?.trim() || "";
           const label = customLabel || defaultLabel;
           const total = sessionItems.length;
           const doneCount = sessionItems.filter(i => isDoneToday(i.id)).length;

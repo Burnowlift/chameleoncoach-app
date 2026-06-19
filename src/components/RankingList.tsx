@@ -2,7 +2,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Medal, Award } from "lucide-react";
+import { Trophy, Medal, Award, Dumbbell, Activity, MessageSquare } from "lucide-react";
 import type { RankingEntry } from "@/hooks/useRanking";
 
 interface Props {
@@ -44,29 +44,25 @@ function EntryCard({ entry, pos, isMe }: { entry: RankingEntry; pos: number; isM
           <div className="flex items-center justify-between gap-2 mb-1">
             <p className="font-semibold truncate">
               {entry.name} {isMe && <Badge variant="outline" className="ml-1">Você</Badge>}
-              {entry.penalty > 0 && (
-                <Badge
-                  variant="destructive"
-                  className="ml-1 text-[10px] px-1.5 py-0 align-middle"
-                  title={entry.penalties.map(p => p.reason).join(" • ")}
-                >
-                  −{entry.penalty.toFixed(1)}
-                </Badge>
-              )}
             </p>
-            <p className="text-lg font-bold text-primary tabular-nums">{entry.score.toFixed(1)}</p>
+            <div className="flex flex-col items-end">
+              <p className="text-xl font-black text-primary tabular-nums tracking-tight">
+                {entry.score.toFixed(0)} <span className="text-xs font-semibold text-muted-foreground ml-0.5">XP</span>
+              </p>
+            </div>
           </div>
-          <Progress value={(entry.score / 5) * 100} className="h-2" />
-          <div className="flex justify-between flex-wrap gap-x-3 text-[11px] text-muted-foreground mt-1.5">
-            <span>Cargas: {entry.actualLoadLogs}/{entry.expectedLoadLogs || "—"}</span>
-            <span>Mobilidade: {entry.actualMobility}/{entry.expectedMobility || "—"}</span>
-            <span>Dias c/ msg: {entry.actualMessages}/{entry.expectedMessages}</span>
+          
+          <div className="flex justify-between flex-wrap gap-x-3 text-[11px] text-muted-foreground mt-2 bg-muted/50 rounded-md p-2">
+            <span className="flex items-center gap-1">
+              <Dumbbell className="h-3 w-3" /> {entry.actualLoadLogs}
+            </span>
+            <span className="flex items-center gap-1">
+              <Activity className="h-3 w-3" /> {entry.actualMobility}
+            </span>
+            <span className="flex items-center gap-1">
+              <MessageSquare className="h-3 w-3" /> {entry.actualMessages}
+            </span>
           </div>
-          {entry.penalty > 0 && (
-            <p className="text-[11px] text-destructive mt-1 truncate" title={entry.penalties.map(p => p.reason).join(" • ")}>
-              {entry.penalties.map(p => p.reason).join(" • ")}
-            </p>
-          )}
         </div>
       </CardContent>
     </Card>
