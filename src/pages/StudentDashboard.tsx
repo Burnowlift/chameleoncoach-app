@@ -240,8 +240,10 @@ const StudentDashboard = () => {
           <>
             <CheckinBanner studentId={student.id} />
 
-            <div className="flex items-center justify-between mb-2">
-              <WeeklySummary studentId={student.id} />
+            <div className="flex justify-center w-full mb-4">
+              <div className="w-full max-w-xl">
+                <WeeklySummary studentId={student.id} />
+              </div>
             </div>
 
             <Tabs defaultValue="workouts" className="w-full">
