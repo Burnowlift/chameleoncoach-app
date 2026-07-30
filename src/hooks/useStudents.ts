@@ -24,6 +24,9 @@ const mapRow = (row: any): Student => ({
   sex: (row.sex as "M" | "F" | null) ?? null,
   bodyWeight: row.body_weight_kg != null ? Number(row.body_weight_kg) : null,
   mobilityInfo: row.mobility_info || undefined,
+  selfRegistered: row.self_registered || false,
+  anamneseCompleted: row.anamnese_completed || false,
+  coachId: row.coach_id || undefined,
 });
 
 export function useStudents() {

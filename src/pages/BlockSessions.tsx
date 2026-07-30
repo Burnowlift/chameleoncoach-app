@@ -144,7 +144,7 @@ const BlockSessions = () => {
                 ...s,
                 exercises: s.exercises.map(e =>
                   e.id === editingExerciseId
-                    ? { ...e, name: exName.trim(), sets: Number(exSets) || 1, reps: exReps.trim(), rpe: exRpe && exRpe !== "none" ? exRpe : undefined, percentage: exPercentage.trim() || undefined, isMainLift: exIsMain }
+                    ? { ...e, name: exName.trim(), sets: Number(exSets) || 1, reps: exReps.trim(), rpe: exRpe && exRpe !== "none" ? exRpe : undefined, percentage: exPercentage.trim() || undefined, isMainLift: exIsMain, trackingType: dbMatch.trackingType || "weight" }
                     : e
                 ),
               }
@@ -160,6 +160,7 @@ const BlockSessions = () => {
           sets: Number(exSets) || 1, reps: exReps.trim(),
           rpe: exRpe && exRpe !== "none" ? exRpe : undefined,
           percentage: exPercentage.trim() || undefined, isMainLift: exIsMain,
+          trackingType: dbMatch.trackingType || "weight",
         };
         const newSessions = sessions.map(s =>
           s.id === targetSessionId ? { ...s, exercises: [...s.exercises, newExercise] } : s

@@ -136,7 +136,7 @@ export function useStudentMobility(studentId: string | undefined) {
 
   const toggleDoneToday = async (studentMobilityId: string) => {
     if (!studentId) return;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = new Date().toLocaleDateString("en-CA");
     const existing = logs.find(l => l.studentMobilityId === studentMobilityId && l.doneDate === today);
     if (existing) {
       await supabase.from("mobility_logs").delete().eq("id", existing.id);
@@ -149,7 +149,7 @@ export function useStudentMobility(studentId: string | undefined) {
   };
 
   const isDoneToday = (studentMobilityId: string) => {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = new Date().toLocaleDateString("en-CA");
     return logs.some(l => l.studentMobilityId === studentMobilityId && l.doneDate === today);
   };
 

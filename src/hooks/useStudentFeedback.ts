@@ -169,19 +169,18 @@ export function useStudentFeedback() {
       copy[idx] = { ...copy[idx], note: text };
       return copy;
     });
-    const key = `${studentId}:${card}`;
-    if (saveTimers.current[key]) clearTimeout(saveTimers.current[key]);
-    saveTimers.current[key] = setTimeout(async () => {
-      await supabase.from("student_feedback_notes").upsert(
-        {
-          student_id: studentId,
-          card_type: card,
-          note: text,
-          updated_by_email: user?.email ?? null,
-        },
-        { onConflict: "student_id,card_type" },
-      );
-    }, 600);
+  }, []);
+
+  const saveNote = useCallback(async (studentId: string, card: CardType, text: string) => {
+    await supabase.from("student_feedback_notes").upsert(
+      {
+        student_id: studentId,
+        card_type: card,
+        note: text,
+        updated_by_email: user?.email ?? null,
+      },
+      { onConflict: "student_id,card_type" },
+    );
   }, [user?.email]);
 
   return {
@@ -191,6 +190,7 @@ export function useStudentFeedback() {
     toggleMark,
     notesMap,
     setNoteLocal,
+    saveNote,
     lastResponseByStudent,
     refetch: fetchAll,
   };

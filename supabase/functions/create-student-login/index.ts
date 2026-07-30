@@ -138,9 +138,26 @@ serve(async (req) => {
       return json({ success: false, error: "Este aluno já possui login vinculado.", code: "already_linked" });
     }
 
+    // PROTEÇÃO: impedir uso de e-mail de treinador para login de aluno.
+    // Sem isso, a senha do treinador seria sobrescrita ao vincular o auth user.
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const { data: coachWithEmail } = await supabaseAdmin
+      .from("coaches")
+      .select("id")
+      .ilike("email", normalizedEmail)
+      .maybeSingle();
+
+    if (coachWithEmail) {
+      return json({
+        success: false,
+        error: "Este e-mail pertence a uma conta de treinador. Use um e-mail diferente para o aluno.",
+        code: "coach_email",
+      });
+    }
+
     // SELF-HEAL: se já existe auth user com esse e-mail (órfão de tentativa anterior interrompida),
     // apenas vincula em vez de tentar criar — evita 422 email_exists e contas penduradas.
-    const preExistingId = await findAuthUserIdByEmail(supabaseAdmin, String(email));
+    const preExistingId = await findAuthUserIdByEmail(supabaseAdmin, normalizedEmail);
     if (preExistingId) {
       const result = await linkOrphanAuthUser(supabaseAdmin, preExistingId, studentId, password);
       if (!result.ok) return json(result.body, result.status);

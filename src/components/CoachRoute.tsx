@@ -33,7 +33,7 @@ export function CoachRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!user) return <Navigate to="/login-treinador" replace />;
-  if (!isCoach) return <Navigate to="/aluno" replace />;
+  if (!isCoach) return <Navigate to="/" replace />;
 
   return <>{children}</>;
 }

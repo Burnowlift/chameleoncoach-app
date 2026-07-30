@@ -418,9 +418,14 @@ export function StudentWorkoutPage({ student, onBack }: Props) {
       if (editingExerciseId) {
         const newSessions = sessions.map(s =>
           s.id === targetSessionId
-            ? { ...s, exercises: s.exercises.map(e => e.id === editingExerciseId
-                ? { ...e, name: exName.trim(), sets: Number(exSets) || 1, reps: exReps.trim(), rpe: exRpe && exRpe !== "none" ? exRpe : undefined, percentage: exPercentage.trim() || undefined, isMainLift: exIsMain }
-                : e) }
+            ? {
+                ...s,
+                exercises: s.exercises.map(e =>
+                  e.id === editingExerciseId
+                    ? { ...e, name: exName.trim(), sets: Number(exSets) || 1, reps: exReps.trim(), rpe: exRpe && exRpe !== "none" ? exRpe : undefined, percentage: exPercentage.trim() || undefined, isMainLift: exIsMain, trackingType: dbMatch.trackingType || "weight" }
+                    : e
+                ),
+              }
             : s
         );
         const updated = { ...block, weekSessions: { ...block.weekSessions, [view.week]: newSessions } };
@@ -433,6 +438,7 @@ export function StudentWorkoutPage({ student, onBack }: Props) {
           sets: Number(exSets) || 1, reps: exReps.trim(),
           rpe: exRpe && exRpe !== "none" ? exRpe : undefined,
           percentage: exPercentage.trim() || undefined, isMainLift: exIsMain,
+          trackingType: dbMatch.trackingType || "weight",
         };
         const newSessions = sessions.map(s => s.id === targetSessionId ? { ...s, exercises: [...s.exercises, newEx] } : s);
         const updated = { ...block, weekSessions: { ...block.weekSessions, [view.week]: newSessions } };
@@ -1146,12 +1152,7 @@ export function StudentWorkoutPage({ student, onBack }: Props) {
         </div>
       </div>
 
-      {view.type === "blocks" && (
-        <>
-          <RmEvolutionChart records={rmRecords} loading={rmLoading} onDeleteRecord={deleteRmRecord} />
-          {renderBlocks()}
-        </>
-      )}
+      {view.type === "blocks" && renderBlocks()}
       {view.type === "weeks" && renderWeeks()}
       {view.type === "sessions" && renderSessions()}
 

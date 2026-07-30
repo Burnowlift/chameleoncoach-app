@@ -12,6 +12,7 @@ const mapRow = (row: any): ExerciseDBItem => ({
   isBenchRm: !!row.is_bench_rm,
   isDeadliftRm: !!row.is_deadlift_rm,
   videoUrl: row.video_url || undefined,
+  trackingType: row.tracking_type || "weight",
 });
 
 export function useExercises() {
@@ -36,6 +37,7 @@ export function useExercises() {
       is_bench_rm: !!item.isBenchRm,
       is_deadlift_rm: !!item.isDeadliftRm,
       video_url: item.videoUrl || null,
+      tracking_type: item.trackingType || "weight",
     });
     if (error) throw error;
     await fetch();
@@ -51,6 +53,7 @@ export function useExercises() {
       is_bench_rm: !!item.isBenchRm,
       is_deadlift_rm: !!item.isDeadliftRm,
       video_url: item.videoUrl || null,
+      tracking_type: item.trackingType || "weight",
     }).eq("id", id);
     if (error) throw error;
     await fetch();

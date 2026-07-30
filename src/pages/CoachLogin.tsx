@@ -27,7 +27,23 @@ const CoachLogin = () => {
 
   useEffect(() => {
     if (!authLoading && user) {
-      navigate("/students");
+      const checkCoach = async () => {
+        const { data } = await supabase
+          .from("coaches")
+          .select("id")
+          .eq("email", user.email || "")
+          .maybeSingle();
+
+        if (data) {
+          navigate("/students");
+        } else {
+          // If a student tries to access the coach login, log them out
+          // so they don't get stuck in a redirect loop and can actually log in.
+          await supabase.auth.signOut();
+          clearRememberMe();
+        }
+      };
+      checkCoach();
     }
   }, [user, authLoading, navigate]);
 

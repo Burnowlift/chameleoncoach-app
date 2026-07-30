@@ -27,7 +27,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Dumbbell, LogOut, User, Loader2, ArrowLeft, MessageSquare, Weight, Send, Calendar, Check, Trash2, Play, CheckCircle2, Camera, Gauge } from "lucide-react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Dumbbell, LogOut, User, Loader2, ArrowLeft, MessageSquare, Weight, Send, Calendar, Check, Trash2, Play, CheckCircle2, Camera, Gauge, X, Timer, Trophy, TrendingUp } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { RmEvolutionChart } from "@/components/RmEvolutionChart";
 import { RpeReferenceTable } from "@/components/RpeReferenceTable";
@@ -42,6 +43,7 @@ import { WeeklySummary } from "@/components/WeeklySummary";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { sbdTotal, formatKg } from "@/lib/utils";
+import { CheckinBanner } from "@/components/CheckinBanner";
 
 type View =
   | { type: "blocks" }
@@ -56,6 +58,7 @@ const StudentDashboard = () => {
   const [view, setView] = useState<View>({ type: "blocks" });
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarDialogOpen, setAvatarDialogOpen] = useState(false);
+  const [showOlderBlocks, setShowOlderBlocks] = useState(false);
 
   // Fetch student profile
   const refreshStudent = useCallback(async () => {
@@ -235,12 +238,19 @@ const StudentDashboard = () => {
         {/* Blocks View Elements */}
         {view.type === "blocks" && (
           <>
-            <WeeklySummary studentId={student.id} />
+            <CheckinBanner studentId={student.id} />
 
-            <Tabs defaultValue="mobility" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="mobility">Minhas Mobilidades</TabsTrigger>
-                <TabsTrigger value="workouts">Meus Treinos</TabsTrigger>
+            <div className="flex items-center justify-between mb-2">
+              <WeeklySummary studentId={student.id} />
+            </div>
+
+            <Tabs defaultValue="workouts" className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="workouts">Treinos</TabsTrigger>
+                <TabsTrigger value="mobility">Mobilidade</TabsTrigger>
+                <TabsTrigger value="checkins" onClick={() => navigate("/aluno/checkins")}>
+                  Check-ins
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="mobility" className="mt-4">
@@ -257,51 +267,83 @@ const StudentDashboard = () => {
                     <p className="text-sm text-muted-foreground">Aguarde seu treinador montar seu programa.</p>
                   </CardContent></Card>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {blocks.map(block => (
-                      <Card key={block.id} className="cursor-pointer hover:border-primary/30 transition-colors"
-                        onClick={() => setView({ type: "weeks", blockId: block.id })}>
-                        <CardContent className="p-5">
-                          <div className="flex items-start gap-3">
-                            <div className="p-2 rounded-lg bg-primary/10">
-                              <Dumbbell className="h-5 w-5 text-primary" />
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {(showOlderBlocks ? blocks : blocks.slice(0, 3)).map(block => (
+                        <Card key={block.id} className="cursor-pointer hover:border-primary/30 transition-colors"
+                          onClick={() => setView({ type: "weeks", blockId: block.id })}>
+                          <CardContent className="p-5">
+                            <div className="flex items-start gap-3">
+                              <div className="p-2 rounded-lg bg-primary/10">
+                                <Dumbbell className="h-5 w-5 text-primary" />
+                              </div>
+                              <div>
+                                <p className="font-semibold">{block.name}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  {block.frequency}x/semana • {block.duration} semanas
+                                </p>
+                              </div>
                             </div>
-                            <div>
-                              <p className="font-semibold">{block.name}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {block.frequency}x/semana • {block.duration} semanas
-                              </p>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                    {blocks.length > 3 && (
+                      <div className="flex justify-center mt-2">
+                        <Button variant="ghost" size="sm" onClick={() => setShowOlderBlocks(!showOlderBlocks)}>
+                          {showOlderBlocks ? "Ocultar Blocos Anteriores" : "Ver Blocos Anteriores"}
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
               </TabsContent>
             </Tabs>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <Card><CardContent className="p-4 text-center">
-                <p className="text-xs text-muted-foreground">Total SBD</p>
-                <p className="text-xl font-bold text-primary">{formatKg(total)}</p>
-              </CardContent></Card>
-              <Card><CardContent className="p-4 text-center">
-                <p className="text-xs text-muted-foreground">Squat</p>
-                <p className="text-xl font-bold">{formatKg(student.squat1RM)}</p>
-              </CardContent></Card>
-              <Card><CardContent className="p-4 text-center">
-                <p className="text-xs text-muted-foreground">Bench</p>
-                <p className="text-xl font-bold">{formatKg(student.bench1RM)}</p>
-              </CardContent></Card>
-              <Card><CardContent className="p-4 text-center">
-                <p className="text-xs text-muted-foreground">Deadlift</p>
-                <p className="text-xl font-bold">{formatKg(student.deadlift1RM)}</p>
-              </CardContent></Card>
-            </div>
-
             <StudentRankingSection studentId={student.id} />
-            <StrengthRankingSection highlightStudentId={student.id} compact limit={4} showSelfRow />
+            
+            <Accordion type="multiple" className="w-full space-y-3 mt-4">
+              <AccordionItem value="strength-ranking" className="border-none">
+                <AccordionTrigger className="bg-card px-4 py-3 rounded-lg border border-border/60 hover:bg-muted/50 data-[state=open]:rounded-b-none transition-all">
+                  <div className="flex items-center gap-2">
+                    <Trophy className="h-4 w-4 text-primary" />
+                    <span className="font-semibold text-sm">Ranking da Força</span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="pt-3">
+                  <StrengthRankingSection highlightStudentId={student.id} compact limit={4} showSelfRow />
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="total-sbd" className="border-none">
+                <AccordionTrigger className="bg-card px-4 py-3 rounded-lg border border-border/60 hover:bg-muted/50 data-[state=open]:rounded-b-none transition-all">
+                  <div className="flex items-center gap-2">
+                    <Dumbbell className="h-4 w-4 text-primary" />
+                    <span className="font-semibold text-sm">Total SBD e Cargas</span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="pt-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <Card><CardContent className="p-4 text-center">
+                      <p className="text-xs text-muted-foreground">Total SBD</p>
+                      <p className="text-xl font-bold text-primary">{formatKg(total)}</p>
+                    </CardContent></Card>
+                    <Card><CardContent className="p-4 text-center">
+                      <p className="text-xs text-muted-foreground">Squat</p>
+                      <p className="text-xl font-bold">{formatKg(student.squat1RM)}</p>
+                    </CardContent></Card>
+                    <Card><CardContent className="p-4 text-center">
+                      <p className="text-xs text-muted-foreground">Bench</p>
+                      <p className="text-xl font-bold">{formatKg(student.bench1RM)}</p>
+                    </CardContent></Card>
+                    <Card><CardContent className="p-4 text-center">
+                      <p className="text-xs text-muted-foreground">Deadlift</p>
+                      <p className="text-xl font-bold">{formatKg(student.deadlift1RM)}</p>
+                    </CardContent></Card>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
           </>
         )}
 
@@ -350,7 +392,19 @@ const StudentDashboard = () => {
         )}
 
         {/* Common Tools for all views */}
-        <RmEvolutionChart records={rmRecords} loading={rmLoading} onDeleteRecord={deleteRmRecord} />
+        <Accordion type="multiple" className="w-full space-y-3">
+          <AccordionItem value="rm-evolution" className="border-none">
+            <AccordionTrigger className="bg-card px-4 py-3 rounded-lg border border-border/60 hover:bg-muted/50 data-[state=open]:rounded-b-none transition-all">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-primary" />
+                <span className="font-semibold text-sm">Gráfico de Evolução 1RM</span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="pt-3">
+              <RmEvolutionChart records={rmRecords} loading={rmLoading} onDeleteRecord={deleteRmRecord} />
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
         {student.joinedAt && (Date.now() - new Date(student.joinedAt).getTime()) < 60 * 24 * 60 * 60 * 1000 && (
           <RpeReferenceTable />
         )}
@@ -467,12 +521,12 @@ function SessionsView({ student, block, week, logs, notes, onUpsertLog, onAddNot
     const log = getLog(sessionId, exerciseId);
     
     const parsedSetsData: ExerciseSetLog[] = setsData
+      .filter(s => s.weight.trim() !== "")
       .map((s, i) => ({
         setIndex: i + 1,
-        weight: Number(s.weight) || 0,
+        weight: Number(s.weight),
         reps: Number(s.reps) || 0
-      }))
-      .filter(s => s.weight > 0);
+      }));
 
     const maxWeight = parsedSetsData.reduce((max, s) => Math.max(max, s.weight), 0);
     const isCompleted = parsedSetsData.length > 0;
@@ -504,11 +558,13 @@ function SessionsView({ student, block, week, logs, notes, onUpsertLog, onAddNot
 
             for (const s of parsedSetsData) {
               const repsToUse = s.reps > 0 ? s.reps : (expectedRepsFromExercise || 1);
-              const est = calculate1RMFromRpe(tag, s.weight, repsToUse, tableRpe);
-              if (est > maxEst1rm) {
-                maxEst1rm = est;
-                bestWeight = s.weight;
-                bestReps = repsToUse;
+              if (repsToUse <= 4 && tableRpe >= 7) {
+                const est = calculate1RMFromRpe(tag, s.weight, repsToUse, tableRpe);
+                if (est > maxEst1rm) {
+                  maxEst1rm = est;
+                  bestWeight = s.weight;
+                  bestReps = repsToUse;
+                }
               }
             }
 
@@ -546,15 +602,15 @@ function SessionsView({ student, block, week, logs, notes, onUpsertLog, onAddNot
     let parsedSetsData: ExerciseSetLog[] = [];
     if (setsDataInputs[key] && setsDataInputs[key].length > 0) {
       parsedSetsData = setsDataInputs[key]
+        .filter(s => s.weight.trim() !== "")
         .map((s, i) => ({
           setIndex: i + 1,
-          weight: Number(s.weight) || 0,
+          weight: Number(s.weight),
           reps: Number(s.reps) || 0
-        }))
-        .filter(s => s.weight > 0);
+        }));
     } else if (existingLog?.setsData && existingLog.setsData.length > 0) {
       parsedSetsData = existingLog.setsData;
-    } else if (existingLog?.weight && existingLog.weight > 0) {
+    } else if (existingLog?.weight !== undefined && existingLog.weight !== null) {
       parsedSetsData = [{ setIndex: 1, weight: existingLog.weight, reps: 0 }];
     }
 
@@ -585,11 +641,13 @@ function SessionsView({ student, block, week, logs, notes, onUpsertLog, onAddNot
 
           for (const s of parsedSetsData) {
             const repsToUse = s.reps > 0 ? s.reps : (expectedRepsFromExercise || 1);
-            const est = calculate1RMFromRpe(tag, s.weight, repsToUse, tableRpe);
-            if (est > maxEst1rm) {
-              maxEst1rm = est;
-              bestWeight = s.weight;
-              bestReps = repsToUse;
+            if (repsToUse <= 4 && tableRpe >= 7) {
+              const est = calculate1RMFromRpe(tag, s.weight, repsToUse, tableRpe);
+              if (est > maxEst1rm) {
+                maxEst1rm = est;
+                bestWeight = s.weight;
+                bestReps = repsToUse;
+              }
             }
           }
 
@@ -657,9 +715,9 @@ function SessionsView({ student, block, week, logs, notes, onUpsertLog, onAddNot
                           {ex.name}
                         </span>
                         {videoUrls[ex.id] && (
-                          <Button variant="ghost" size="icon" className="h-9 w-9 sm:h-6 sm:w-6 shrink-0" asChild>
+                          <Button variant="ghost" size="icon" className="h-10 w-10 sm:h-8 sm:w-8 shrink-0" asChild>
                             <a href={videoUrls[ex.id]} target="_blank" rel="noopener noreferrer">
-                              <Play className="h-4 w-4 sm:h-3.5 sm:w-3.5 text-primary" />
+                              <Play className="h-5 w-5 sm:h-4 sm:w-4 text-primary" />
                             </a>
                           </Button>
                         )}
@@ -683,11 +741,15 @@ function SessionsView({ student, block, week, logs, notes, onUpsertLog, onAddNot
                             <div key={i} className="flex gap-2 items-center">
                               <span className="text-xs font-medium text-muted-foreground w-12 shrink-0">Série {i + 1}</span>
                               <div className="relative flex-1">
-                                <Weight className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                                {ex.trackingType === "time" ? (
+                                  <Timer className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                                ) : (
+                                  <Weight className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                                )}
                                 <Input
                                   type="number"
                                   inputMode="decimal"
-                                  placeholder="Carga (kg)"
+                                  placeholder={ex.trackingType === "time" ? "Tempo (s/m)" : "Carga (kg)"}
                                   className={`h-10 sm:h-9 text-base sm:text-sm pl-7 pr-2 w-full ${currentSet.weight ? "border-green-500/60 focus-visible:ring-green-500/30" : ""}`}
                                   value={currentSet.weight}
                                   onChange={(e) => {

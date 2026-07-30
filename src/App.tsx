@@ -12,18 +12,15 @@ import { StudentRoute } from "@/components/StudentRoute";
 import LandingPage from "./pages/LandingPage.tsx";
 import CoachLogin from "./pages/CoachLogin.tsx";
 import ResetPassword from "./pages/ResetPassword.tsx";
-import CoachDashboard from "./pages/Index.tsx";
 import Students from "./pages/Students.tsx";
-import StudentsControl from "./pages/StudentsControl.tsx";
+import StudentProfile from "./pages/StudentProfile.tsx";
 import StudentWorkout from "./pages/StudentWorkout.tsx";
 import StudentMobility from "./pages/StudentMobility.tsx";
 import BlockWeeks from "./pages/BlockWeeks.tsx";
 import BlockSessions from "./pages/BlockSessions.tsx";
 import Plans from "./pages/Plans.tsx";
-import Customization from "./pages/Customization.tsx";
 import ExerciseDatabase from "./pages/ExerciseDatabase.tsx";
 import MobilityDatabase from "./pages/MobilityDatabase.tsx";
-import Finances from "./pages/Finances.tsx";
 import WorkoutTemplates from "./pages/WorkoutTemplates.tsx";
 import TemplateWeeks from "./pages/TemplateWeeks.tsx";
 import TemplateSessions from "./pages/TemplateSessions.tsx";
@@ -32,7 +29,11 @@ import MobilityTemplateEditor from "./pages/MobilityTemplateEditor.tsx";
 
 import Ranking from "./pages/Ranking.tsx";
 import StudentLogin from "./pages/StudentLogin.tsx";
+import StudentRegister from "./pages/StudentRegister.tsx";
 import StudentDashboard from "./pages/StudentDashboard.tsx";
+import StudentAnamnese from "./pages/StudentAnamnese.tsx";
+import StudentCheckin from "./pages/StudentCheckin.tsx";
+import StudentCheckinHistory from "./pages/StudentCheckinHistory.tsx";
 import CoachSettings from "./pages/CoachSettings.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import { JaguarTheme } from "@/components/JaguarTheme";
@@ -52,9 +53,8 @@ const App = () => (
             
             {/* Coach routes - protected */}
             <Route path="/login-treinador" element={<CoachLogin />} />
-            <Route path="/dashboard" element={<CoachRoute><MenuRoute menuKey="dashboard"><CoachDashboard /></MenuRoute></CoachRoute>} />
             <Route path="/students" element={<CoachRoute><MenuRoute menuKey="students"><ErrorBoundary><Students /></ErrorBoundary></MenuRoute></CoachRoute>} />
-            <Route path="/controle-alunos" element={<CoachRoute><MenuRoute menuKey="students_control"><StudentsControl /></MenuRoute></CoachRoute>} />
+            <Route path="/students/:studentId/profile" element={<CoachRoute><MenuRoute menuKey="students"><StudentProfile /></MenuRoute></CoachRoute>} />
             <Route path="/students/:studentId/workout" element={<CoachRoute><MenuRoute menuKey="students"><StudentWorkout /></MenuRoute></CoachRoute>} />
             <Route path="/students/:studentId/mobility" element={<CoachRoute><MenuRoute menuKey="students"><StudentMobility /></MenuRoute></CoachRoute>} />
             <Route path="/students/:studentId/workout/:blockId" element={<CoachRoute><MenuRoute menuKey="students"><BlockWeeks /></MenuRoute></CoachRoute>} />
@@ -67,14 +67,16 @@ const App = () => (
             <Route path="/templates/:templateId/week/:weekNumber" element={<CoachRoute><MenuRoute menuKey="templates"><TemplateSessions /></MenuRoute></CoachRoute>} />
             <Route path="/mobility-templates" element={<CoachRoute><MenuRoute menuKey="mobility_templates"><MobilityTemplates /></MenuRoute></CoachRoute>} />
             <Route path="/mobility-templates/:templateId" element={<CoachRoute><MenuRoute menuKey="mobility_templates"><MobilityTemplateEditor /></MenuRoute></CoachRoute>} />
-            <Route path="/financas" element={<CoachRoute><MenuRoute menuKey="finances"><Finances /></MenuRoute></CoachRoute>} />
             
             <Route path="/ranking" element={<CoachRoute><MenuRoute menuKey="ranking"><Ranking /></MenuRoute></CoachRoute>} />
-            <Route path="/customization" element={<CoachRoute><MenuRoute menuKey="customization"><Customization /></MenuRoute></CoachRoute>} />
             <Route path="/coach-settings" element={<CoachRoute><MenuRoute menuKey="coach_settings"><CoachSettings /></MenuRoute></CoachRoute>} />
             
             {/* Student routes - protected (Jaguar dark theme) */}
             <Route path="/aluno/login" element={<JaguarTheme><StudentLogin /></JaguarTheme>} />
+            <Route path="/aluno/cadastro" element={<JaguarTheme><StudentRegister /></JaguarTheme>} />
+            <Route path="/aluno/anamnese" element={<JaguarTheme><StudentRoute skipAnamneseCheck><StudentAnamnese /></StudentRoute></JaguarTheme>} />
+            <Route path="/aluno/checkin" element={<JaguarTheme><StudentRoute><StudentCheckin /></StudentRoute></JaguarTheme>} />
+            <Route path="/aluno/checkins" element={<JaguarTheme><StudentRoute><StudentCheckinHistory /></StudentRoute></JaguarTheme>} />
             <Route path="/aluno" element={<JaguarTheme><StudentRoute><StudentDashboard /></StudentRoute></JaguarTheme>} />
 
             {/* Password reset */}

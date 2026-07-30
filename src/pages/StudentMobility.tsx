@@ -19,8 +19,7 @@ import { useMobilityTemplates } from "@/hooks/useMobilityTemplates";
 const SESSION_LABELS = ["A", "B", "C", "D", "E", "F", "G"];
 const MAX_SESSIONS = 7;
 
-const StudentMobility = () => {
-  const { studentId } = useParams();
+export function StudentMobilityContent({ studentId, onBack }: { studentId: string; onBack?: () => void }) {
   const navigate = useNavigate();
   const { students, update } = useStudents();
   const student = students.find((s) => s.id === studentId);
@@ -221,25 +220,25 @@ const StudentMobility = () => {
 
   if (!student) {
     return (
-      <CoachLayout>
-        <div className="flex flex-col items-center justify-center py-20">
-          <p className="text-muted-foreground">Aluno não encontrado.</p>
-          <Button variant="outline" className="mt-4" onClick={() => navigate("/students")}>Voltar</Button>
-        </div>
-      </CoachLayout>
+      <div className="flex flex-col items-center justify-center py-20">
+        <p className="text-muted-foreground">Aluno não encontrado.</p>
+        <Button variant="outline" className="mt-4" onClick={onBack || (() => navigate("/students"))}>Voltar</Button>
+      </div>
     );
   }
 
   const hasProtocol = sessionCount > 0;
 
   return (
-    <CoachLayout>
+    <>
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/students")}>
+      <div className="flex items-center gap-4">
+        {onBack && (
+          <Button variant="ghost" size="icon" onClick={onBack}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div className="flex items-center gap-3">
+        )}
+        <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary">
               {student.name.split(" ").map((n) => n[0]).join("")}
             </div>
@@ -632,6 +631,16 @@ const StudentMobility = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </>
+  );
+}
+
+const StudentMobility = () => {
+  const { studentId } = useParams();
+  const navigate = useNavigate();
+  return (
+    <CoachLayout>
+      <StudentMobilityContent studentId={studentId!} onBack={() => navigate("/students")} />
     </CoachLayout>
   );
 };

@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Search, Plus, Pencil, Trash2, Dumbbell, CalendarIcon, KeyRound, TrendingUp, Activity, CheckCircle2, AlertTriangle, ChevronDown, X, Eye, EyeOff } from "lucide-react";
+import { Search, Plus, Pencil, Trash2, Dumbbell, CalendarIcon, KeyRound, TrendingUp, Activity, CheckCircle2, AlertTriangle, ChevronDown, X, Eye, EyeOff, Link } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn, sbdTotal, formatKg } from "@/lib/utils";
 import { mockPlans, type Plan, type Student } from "@/lib/mock-data";
@@ -615,10 +615,28 @@ const Students = () => {
             <h1 className="text-xl sm:text-2xl font-bold">Alunos</h1>
             <p className="text-sm text-muted-foreground">{students.length} alunos cadastrados</p>
           </div>
-          <Button className="gap-2 w-full sm:w-auto" onClick={() => setOpen(true)}>
-            <Plus className="h-4 w-4" />
-            Novo Aluno
-          </Button>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Button 
+              variant="outline" 
+              className="gap-2 w-full sm:w-auto" 
+              onClick={() => {
+                if (user?.id) {
+                  const link = `${window.location.origin}/aluno/cadastro?coach=${user.id}`;
+                  navigator.clipboard.writeText(link);
+                  toast.success("Link de convite copiado!");
+                } else {
+                  toast.error("Erro ao obter seu ID.");
+                }
+              }}
+            >
+              <Link className="h-4 w-4" />
+              Copiar Link de Convite
+            </Button>
+            <Button className="gap-2 w-full sm:w-auto" onClick={() => setOpen(true)}>
+              <Plus className="h-4 w-4" />
+              Novo Aluno
+            </Button>
+          </div>
         </div>
 
         <div className="space-y-3">
@@ -666,7 +684,7 @@ const Students = () => {
                   <ChevronDown className="h-4 w-4 opacity-50 shrink-0" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-64 p-2" align="start">
+              <PopoverContent className="w-[calc(100vw-24px)] sm:w-64 p-2" align="start">
                 <div className="flex items-center justify-between px-1 pb-2 mb-1 border-b">
                   <span className="text-xs font-medium text-muted-foreground">Filtrar por planos</span>
                   {filters.plans.length > 0 && (
@@ -775,7 +793,11 @@ const Students = () => {
               const showNoResponseBadge = daysNoResponse >= 3;
               const blockInfo = blockEndMap[student.id];
               return (
-                <Card key={student.id} className="hover:border-primary/30 transition-colors">
+                <Card 
+                  key={student.id} 
+                  className="hover:border-primary/30 transition-colors cursor-pointer"
+                  onClick={() => navigate(`/students/${student.id}/profile`)}
+                >
                   <CardContent className="p-2.5 sm:p-4">
                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2 lg:gap-3">
                       {/* Header: avatar + nome + ações */}
@@ -799,6 +821,12 @@ const Students = () => {
                               </Badge>
                             )}
                             <p className="font-medium text-sm leading-tight truncate">{student.name}</p>
+                            {student.selfRegistered && (
+                              <Badge variant="default" className="text-[9px] px-1.5 py-0 bg-blue-600 hover:bg-blue-700">Novo</Badge>
+                            )}
+                            {student.anamneseCompleted === false && (
+                              <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-amber-500 text-amber-500">Anamnese pendente</Badge>
+                            )}
                             <Badge variant="outline" className={cn(st.className, "lg:hidden text-[9px] px-1 py-0 leading-tight")}>{st.label}</Badge>
                           </div>
                           <p className="text-[11px] lg:text-xs text-muted-foreground truncate leading-tight">
@@ -888,6 +916,10 @@ const Students = () => {
                           isActive={(wd) => feedback.isActive(student.id, "orange", wd)}
                           onToggle={(wd) => feedback.toggleMark(student.id, "orange", wd)}
                           onNoteChange={(t) => feedback.setNoteLocal(student.id, "orange", t)}
+                          onSave={async () => {
+                            await feedback.saveNote(student.id, "orange", feedback.notesMap[student.id]?.orange ?? "");
+                            toast.success("Anotação salva!");
+                          }}
                         />
                       )}
                       <FeedbackCard
@@ -898,6 +930,10 @@ const Students = () => {
                         isActive={(wd) => feedback.isActive(student.id, "green", wd)}
                         onToggle={(wd) => feedback.toggleMark(student.id, "green", wd)}
                         onNoteChange={(t) => feedback.setNoteLocal(student.id, "green", t)}
+                        onSave={async () => {
+                          await feedback.saveNote(student.id, "green", feedback.notesMap[student.id]?.green ?? "");
+                          toast.success("Anotação salva!");
+                        }}
                       />
                     </div>
                   </CardContent>

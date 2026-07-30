@@ -53,15 +53,31 @@ const ResetPassword = () => {
 
     setLoading(true);
     const { error: updateError } = await supabase.auth.updateUser({ password });
-    setLoading(false);
-
+    
     if (updateError) {
+      setLoading(false);
       setError("Erro ao redefinir a senha. Tente novamente.");
       return;
     }
 
+    // Identificar se é coach ou aluno
+    const { data: { user } } = await supabase.auth.getUser();
+    let isCoach = false;
+    if (user && user.email) {
+      const { data } = await supabase.from("coaches").select("id").eq("email", user.email).maybeSingle();
+      if (data) isCoach = true;
+    }
+    
+    // Fazer logout por precaução para forçar login normal depois
+    await supabase.auth.signOut();
+    
+    setLoading(false);
     setSuccess(true);
-    setTimeout(() => navigate("/login-treinador"), 3000);
+    
+    // Redireciona para o login correto
+    setTimeout(() => {
+      navigate(isCoach ? "/login-treinador" : "/aluno/login");
+    }, 3000);
   };
 
   if (!isRecovery) {

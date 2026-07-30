@@ -295,9 +295,18 @@ const StudentLogin = () => {
             </form>
           )}
 
-          <div className="mt-6 pt-4 border-t border-border/50 text-center">
+          <div className="mt-6 pt-4 border-t border-border/50 text-center space-y-2">
             <p className="text-xs text-muted-foreground">
-              Acesso exclusivo para alunos cadastrados pelo treinador.
+              Ainda não tem conta?{" "}
+              <button
+                onClick={() => navigate("/aluno/cadastro")}
+                className="text-primary hover:text-primary/80 font-medium transition-colors"
+              >
+                Criar conta
+              </button>
+            </p>
+            <p className="text-[10px] text-muted-foreground/60">
+              Você precisará do link de cadastro fornecido pelo seu treinador.
             </p>
           </div>
         </CardContent>

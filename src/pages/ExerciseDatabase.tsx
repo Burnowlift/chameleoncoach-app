@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Plus, Trash2, Search, Dumbbell, Play, Pencil } from "lucide-react";
@@ -36,11 +37,13 @@ const ExerciseDatabase = () => {
   const [isBenchRm, setIsBenchRm] = useState(false);
   const [isDeadliftRm, setIsDeadliftRm] = useState(false);
   const [videoUrl, setVideoUrl] = useState("");
+  const [trackingType, setTrackingType] = useState<"weight" | "time">("weight");
 
   const resetForm = () => {
     setName(""); setMuscleGroup(""); setMuscleGroup2(""); setMuscleGroup3("");
     setIsSquatRm(false); setIsBenchRm(false); setIsDeadliftRm(false);
     setVideoUrl("");
+    setTrackingType("weight");
   };
 
   const openEdit = (ex: ExerciseDBItem) => {
@@ -53,6 +56,7 @@ const ExerciseDatabase = () => {
     setIsBenchRm(!!ex.isBenchRm);
     setIsDeadliftRm(!!ex.isDeadliftRm);
     setVideoUrl(ex.videoUrl || "");
+    setTrackingType(ex.trackingType || "weight");
   };
 
   const handleCreate = async () => {
@@ -70,6 +74,7 @@ const ExerciseDatabase = () => {
         isBenchRm,
         isDeadliftRm,
         videoUrl: videoUrl.trim() || undefined,
+        trackingType,
       });
       resetForm();
       setOpenNew(false);
@@ -95,6 +100,7 @@ const ExerciseDatabase = () => {
         isBenchRm,
         isDeadliftRm,
         videoUrl: videoUrl.trim() || undefined,
+        trackingType,
       });
       resetForm();
       setEditing(null);
@@ -249,6 +255,9 @@ const ExerciseDatabase = () => {
                             )}
                           </div>
                         )}
+                        {ex.trackingType === "time" && (
+                          <Badge variant="outline" className="text-[10px] mt-1 bg-orange-500/10 text-orange-600 border-orange-300">Tempo</Badge>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
@@ -283,6 +292,19 @@ const ExerciseDatabase = () => {
             <div className="space-y-2">
               <Label>Nome do Exercício</Label>
               <Input placeholder="Ex: Agachamento Livre" value={name} onChange={e => setName(e.target.value)} maxLength={100} />
+            </div>
+            <div className="space-y-2">
+              <Label>Tipo de Medição</Label>
+              <RadioGroup value={trackingType} onValueChange={(v) => setTrackingType(v as "weight" | "time")} className="flex gap-4">
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="weight" id="new-weight" />
+                  <Label htmlFor="new-weight" className="cursor-pointer">Carga (kg)</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="time" id="new-time" />
+                  <Label htmlFor="new-time" className="cursor-pointer">Tempo</Label>
+                </div>
+              </RadioGroup>
             </div>
             <div className="space-y-2">
               <Label>Grupo Muscular</Label>
@@ -341,6 +363,19 @@ const ExerciseDatabase = () => {
             <div className="space-y-2">
               <Label>Nome do Exercício</Label>
               <Input value={name} onChange={e => setName(e.target.value)} maxLength={100} />
+            </div>
+            <div className="space-y-2">
+              <Label>Tipo de Medição</Label>
+              <RadioGroup value={trackingType} onValueChange={(v) => setTrackingType(v as "weight" | "time")} className="flex gap-4">
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="weight" id="edit-weight" />
+                  <Label htmlFor="edit-weight" className="cursor-pointer">Carga (kg)</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="time" id="edit-time" />
+                  <Label htmlFor="edit-time" className="cursor-pointer">Tempo</Label>
+                </div>
+              </RadioGroup>
             </div>
             <div className="space-y-2">
               <Label>Grupo Muscular</Label>

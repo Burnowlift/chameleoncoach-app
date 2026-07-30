@@ -22,7 +22,11 @@ export interface Student {
   mobilityInfo?: {
     sessionCount?: number;
     sessionNames?: Record<number, string>;
+    coachNotes?: string;
   };
+  selfRegistered?: boolean;
+  anamneseCompleted?: boolean;
+  coachId?: string;
 }
 
 export interface TrainingBlock {
@@ -56,6 +60,7 @@ export interface WorkoutExercise {
   percentage?: string;
   isMainLift: boolean;
   videoUrl?: string;
+  trackingType?: "weight" | "time";
 }
 
 export interface WorkoutTemplate {
@@ -79,6 +84,7 @@ export interface ExerciseDBItem {
   isBenchRm: boolean;
   isDeadliftRm: boolean;
   videoUrl?: string;
+  trackingType?: "weight" | "time";
 }
 
 export interface Plan {

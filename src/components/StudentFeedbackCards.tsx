@@ -10,6 +10,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Save } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { CardType } from "@/hooks/useStudentFeedback";
 
@@ -31,6 +33,7 @@ interface Props {
   isActive: (weekday: number) => boolean;
   onToggle: (weekday: number) => void;
   onNoteChange: (text: string) => void;
+  onSave: () => void;
   label: string;
 }
 
@@ -40,6 +43,7 @@ export function FeedbackCard({
   isActive,
   onToggle,
   onNoteChange,
+  onSave,
   label,
 }: Props) {
   const isOrange = card === "orange";
@@ -92,12 +96,26 @@ export function FeedbackCard({
           })}
         </div>
       </div>
-      <Textarea
-        value={note}
-        onChange={(e) => onNoteChange(e.target.value)}
-        placeholder={isOrange ? "Anotações privadas..." : "Anotações compartilhadas..."}
-        className="min-h-[44px] text-xs bg-background/60"
-      />
+      <div className="flex gap-2 items-start" onClick={(e) => e.stopPropagation()}>
+        <Textarea
+          value={note}
+          onChange={(e) => onNoteChange(e.target.value)}
+          placeholder={isOrange ? "Anotações privadas..." : "Anotações compartilhadas..."}
+          className="min-h-[44px] text-xs bg-background/60 flex-1"
+        />
+        <Button 
+          size="sm" 
+          variant={isOrange ? "secondary" : "outline"} 
+          className={cn("h-11 px-3 flex flex-col gap-1", isOrange ? "text-orange-700 hover:text-orange-800" : "text-emerald-700 hover:text-emerald-800")}
+          onClick={(e) => {
+            e.stopPropagation();
+            onSave();
+          }}
+        >
+          <Save className="h-4 w-4" />
+          <span className="text-[9px]">Salvar</span>
+        </Button>
+      </div>
 
       <AlertDialog open={confirmDay !== null} onOpenChange={(o) => !o && setConfirmDay(null)}>
         <AlertDialogContent>
