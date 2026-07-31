@@ -5,7 +5,7 @@ import { CoachLayout } from "@/components/CoachLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Loader2, Calendar, Activity, ClipboardList, TrendingUp, AlertCircle, FileText, Download, CheckCircle2, MessageSquare, Camera } from "lucide-react";
+import { ArrowLeft, Loader2, Calendar, Activity, ClipboardList, TrendingUp, AlertCircle, FileText, Download, CheckCircle2, MessageSquare, Camera, Trophy } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
@@ -19,6 +19,7 @@ import { StudentNotesTab } from "@/components/StudentNotesTab";
 import { BodyWeightHistorySection } from "@/components/BodyWeightHistorySection";
 import { RmEvolutionChart } from "@/components/RmEvolutionChart";
 import { useRmHistory } from "@/hooks/useRmHistory";
+import { MeetAttemptsTab } from "@/components/MeetAttemptsTab";
 import { useStudents } from "@/hooks/useStudents";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -63,7 +64,7 @@ export default function StudentProfile() {
   return (
     <CoachLayout>
       <div className="space-y-6 w-full max-w-[1600px] mx-auto px-2 sm:px-4 lg:px-8">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 print:hidden">
           <Button variant="ghost" size="icon" onClick={() => navigate("/students")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
@@ -85,7 +86,7 @@ export default function StudentProfile() {
         </div>
 
         <Tabs defaultValue="anamnese" className="w-full">
-          <TabsList className="grid grid-cols-6 w-full h-auto rounded-lg bg-muted/50 p-1">
+          <TabsList className="grid grid-cols-7 w-full h-auto rounded-lg bg-muted/50 p-1 print:hidden">
             <TabsTrigger value="anamnese" className="py-2 text-xs sm:text-sm gap-2">
               <ClipboardList className="h-4 w-4" /> <span className="hidden sm:inline">Anamnese</span>
             </TabsTrigger>
@@ -106,6 +107,9 @@ export default function StudentProfile() {
             </TabsTrigger>
             <TabsTrigger value="anotacoes" className="py-2 text-xs sm:text-sm gap-2">
               <FileText className="h-4 w-4" /> <span className="hidden sm:inline">Anotações</span>
+            </TabsTrigger>
+            <TabsTrigger value="campeonato" className="py-2 text-xs sm:text-sm gap-2">
+              <Trophy className="h-4 w-4" /> <span className="hidden sm:inline">Campeonato</span>
             </TabsTrigger>
           </TabsList>
 
@@ -397,6 +401,11 @@ export default function StudentProfile() {
           {/* ABA ANOTAÇÕES */}
           <TabsContent value="anotacoes" className="mt-6">
             <StudentNotesTab student={student} />
+          </TabsContent>
+
+          {/* ABA CAMPEONATO */}
+          <TabsContent value="campeonato" className="mt-6">
+            <MeetAttemptsTab student={student} />
           </TabsContent>
         </Tabs>
       </div>
