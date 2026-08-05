@@ -103,7 +103,7 @@ export function useAnamnese(studentId: string | undefined) {
   useEffect(() => { fetchAnamnese(); }, [fetchAnamnese]);
 
   const saveStep = async (stepData: Partial<AnamneseData>, step: number) => {
-    if (!studentId) return;
+    if (!studentId) return null;
 
     const payload: any = {
       ...stepData,
@@ -115,16 +115,28 @@ export function useAnamnese(studentId: string | undefined) {
       payload.data_nascimento = null;
     }
 
-    if (anamnese?.id) {
+    let targetId = anamnese?.id;
+    if (!targetId) {
+      const { data: existing } = await supabase
+        .from("anamneses")
+        .select("id")
+        .eq("student_id", studentId)
+        .maybeSingle();
+      targetId = existing?.id;
+    }
+
+    let resultRow: AnamneseData | null = null;
+
+    if (targetId) {
       // Update
       const { data, error } = await supabase
         .from("anamneses")
         .update(payload)
-        .eq("id", anamnese.id)
+        .eq("id", targetId)
         .select()
         .maybeSingle();
-      if (!error && data) setAnamnese(mapRow(data));
       if (error) throw error;
+      if (data) resultRow = mapRow(data);
     } else {
       // Insert
       const { data, error } = await supabase
@@ -132,21 +144,45 @@ export function useAnamnese(studentId: string | undefined) {
         .insert({ student_id: studentId, ...payload })
         .select()
         .maybeSingle();
-      if (!error && data) setAnamnese(mapRow(data));
       if (error) throw error;
+      if (data) resultRow = mapRow(data);
     }
+
+    if (resultRow) {
+      setAnamnese(resultRow);
+    }
+    return resultRow;
   };
 
-  const completeAnamnese = async () => {
-    if (!anamnese?.id) return;
+  const completeAnamnese = async (anamneseIdOverride?: string) => {
+    let targetId = anamneseIdOverride || anamnese?.id;
+    if (!targetId && studentId) {
+      const { data: existing } = await supabase
+        .from("anamneses")
+        .select("id")
+        .eq("student_id", studentId)
+        .maybeSingle();
+      targetId = existing?.id;
+    }
+
+    if (!targetId) return;
+
     const { data, error } = await supabase
       .from("anamneses")
       .update({ status: "completed", updated_at: new Date().toISOString() })
-      .eq("id", anamnese.id)
+      .eq("id", targetId)
       .select()
       .maybeSingle();
-    if (!error && data) setAnamnese(mapRow(data));
+
     if (error) throw error;
+    if (data) setAnamnese(mapRow(data));
+
+    if (studentId) {
+      await supabase
+        .from("students")
+        .update({ anamnese_completed: true } as any)
+        .eq("id", studentId);
+    }
   };
 
   const uploadFile = async (file: File, path: string): Promise<string> => {

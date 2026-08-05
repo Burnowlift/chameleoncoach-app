@@ -939,7 +939,7 @@ export function StudentWorkoutPage({ student, onBack }: Props) {
                               log.setsData.map((s, i) => (
                                 s ? (
                                   <Badge key={i} variant="outline" className="text-[9px] py-0 px-1 gap-0.5 border-primary/30 text-primary">
-                                    <Weight className="h-2 w-2" />{formatKg(Number(s.weight) || 0)} x {Number(s.reps) || 0}
+                                    <Weight className="h-2 w-2" />{formatKg(Number(s.weight) || 0)} x {Number(s.reps) || 0}{s?.rpe ? ` @ RPE ${s.rpe}` : ""}
                                   </Badge>
                                 ) : null
                               ))

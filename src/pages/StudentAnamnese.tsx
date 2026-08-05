@@ -59,8 +59,11 @@ const StudentAnamnese = () => {
   useEffect(() => {
     if (anamnese) {
       setFormData(anamnese);
-      if (anamnese.current_step && anamnese.current_step > 1) {
+      // Only restore step if there's a real saved anamnese with progress
+      if (anamnese.id && anamnese.current_step && anamnese.current_step > 1) {
         setStep(anamnese.current_step);
+      } else {
+        setStep(1);
       }
     }
   }, [anamnese]);
@@ -99,14 +102,16 @@ const StudentAnamnese = () => {
   const handleComplete = async () => {
     setSaving(true);
     try {
-      await saveStep(formData, TOTAL_STEPS);
-      await completeAnamnese();
+      const saved = await saveStep(formData, TOTAL_STEPS);
+      await completeAnamnese(saved?.id);
+
       toast.success("Anamnese concluída! 🎉");
-      navigate("/aluno");
-    } catch {
+      window.location.href = "/aluno";
+    } catch (err) {
+      console.error("Erro ao finalizar anamnese:", err);
       toast.error("Erro ao finalizar anamnese.");
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {

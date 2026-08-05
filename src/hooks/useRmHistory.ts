@@ -67,30 +67,80 @@ export function useRmHistory(studentId: string | undefined) {
   }, [studentId, fetch]);
 
   const addRecord = async (record: Omit<RmRecord, "id" | "recordedAt">) => {
-    const { data, error } = await supabase.from("rm_history").insert({
-      student_id: record.studentId,
-      exercise_id: record.exerciseId,
-      sbd_type: record.sbdType,
-      weight: record.weight,
-      reps: record.reps,
-      estimated_1rm: record.estimated1rm,
-    }).select().single();
-    if (error) throw error;
-    if (data) {
-      const r: any = data;
-      setRecords(prev => {
-        if (prev.some(x => x.id === r.id)) return prev;
-        return [...prev, {
+    // 1. Verificar se já existe um registro de 1RM para este aluno, exercício e sbdType
+    const { data: existingRecords } = await supabase
+      .from("rm_history")
+      .select("id")
+      .eq("student_id", record.studentId)
+      .eq("exercise_id", record.exerciseId)
+      .eq("sbd_type", record.sbdType)
+      .order("recorded_at", { ascending: false })
+      .limit(1);
+
+    const existing = existingRecords?.[0];
+
+    if (existing) {
+      // 2. Se já existe, sobrescreve/atualiza o registro existente
+      const { data, error } = await supabase
+        .from("rm_history")
+        .update({
+          weight: record.weight,
+          reps: record.reps,
+          estimated_1rm: record.estimated1rm,
+          recorded_at: new Date().toISOString(),
+        })
+        .eq("id", existing.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      if (data) {
+        const r: any = data;
+        const updated: RmRecord = {
           id: r.id,
           studentId: r.student_id,
           exerciseId: r.exercise_id,
-          sbdType: r.sbd_type,
+          sbdType: r.sbd_type as RmRecord["sbdType"],
           weight: Number(r.weight),
           reps: Number(r.reps),
           estimated1rm: Number(r.estimated_1rm),
           recordedAt: r.recorded_at,
-        }];
-      });
+        };
+        setRecords(prev => prev.map(x => x.id === r.id ? updated : x));
+      }
+    } else {
+      // 3. Se não existe, insere um novo registro
+      const { data, error } = await supabase
+        .from("rm_history")
+        .insert({
+          student_id: record.studentId,
+          exercise_id: record.exerciseId,
+          sbd_type: record.sbdType,
+          weight: record.weight,
+          reps: record.reps,
+          estimated_1rm: record.estimated1rm,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      if (data) {
+        const r: any = data;
+        const inserted: RmRecord = {
+          id: r.id,
+          studentId: r.student_id,
+          exerciseId: r.exercise_id,
+          sbdType: r.sbd_type as RmRecord["sbdType"],
+          weight: Number(r.weight),
+          reps: Number(r.reps),
+          estimated1rm: Number(r.estimated_1rm),
+          recordedAt: r.recorded_at,
+        };
+        setRecords(prev => {
+          if (prev.some(x => x.id === r.id)) return prev;
+          return [...prev, inserted];
+        });
+      }
     }
   };
 

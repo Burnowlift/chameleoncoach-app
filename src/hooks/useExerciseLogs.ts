@@ -5,6 +5,7 @@ export interface ExerciseSetLog {
   setIndex: number;
   weight: number;
   reps: number;
+  rpe?: number | null;
 }
 
 export interface ExerciseLog {

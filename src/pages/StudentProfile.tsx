@@ -5,7 +5,7 @@ import { CoachLayout } from "@/components/CoachLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Loader2, Calendar, Activity, ClipboardList, TrendingUp, AlertCircle, FileText, Download, CheckCircle2, MessageSquare, Camera, Trophy } from "lucide-react";
+import { ArrowLeft, Loader2, Calendar, Activity, ClipboardList, TrendingUp, AlertCircle, FileText, Download, CheckCircle2, MessageSquare, Camera, Trophy, RefreshCw } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
@@ -24,6 +24,17 @@ import { useStudents } from "@/hooks/useStudents";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function StudentProfile() {
   const { studentId } = useParams();
@@ -37,6 +48,8 @@ export default function StudentProfile() {
   
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
   const [savingComment, setSavingComment] = useState<string | null>(null);
+  const [requestingNewAnamnese, setRequestingNewAnamnese] = useState(false);
+  const [newAnamneseDialogOpen, setNewAnamneseDialogOpen] = useState(false);
 
   if (studentsLoading || !student) {
     return (
@@ -59,6 +72,35 @@ export default function StudentProfile() {
       toast.error("Erro ao salvar comentário.");
     }
     setSavingComment(null);
+  };
+
+  const handleRequestNewAnamnese = async () => {
+    if (!studentId) return;
+    setRequestingNewAnamnese(true);
+    try {
+      // 1. Deletar a anamnese atual
+      const { error: deleteError } = await supabase
+        .from("anamneses")
+        .delete()
+        .eq("student_id", studentId);
+      if (deleteError) throw deleteError;
+
+      // 2. Resetar flag no students
+      const { error: updateError } = await supabase
+        .from("students")
+        .update({ anamnese_completed: false } as any)
+        .eq("id", studentId);
+      if (updateError) throw updateError;
+
+      toast.success("Nova anamnese solicitada! O aluno será redirecionado ao acessar o app.");
+      setNewAnamneseDialogOpen(false);
+      // Recarregar a página para refletir as mudanças
+      window.location.reload();
+    } catch (err: any) {
+      console.error("Erro ao solicitar nova anamnese:", err);
+      toast.error("Erro ao solicitar nova anamnese.");
+    }
+    setRequestingNewAnamnese(false);
   };
 
   return (
@@ -118,103 +160,139 @@ export default function StudentProfile() {
             {anamneseLoading ? (
               <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
             ) : anamnese?.status === "completed" ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-primary" /> Dados Pessoais
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3 text-sm">
-                    <div className="grid grid-cols-2 gap-2">
-                      <div><span className="text-muted-foreground block text-xs">Telefone</span><span className="font-medium">{student.phone || "-"}</span></div>
-                      <div><span className="text-muted-foreground block text-xs">CPF</span><span className="font-medium">{student.cpf || "-"}</span></div>
-                      <div><span className="text-muted-foreground block text-xs">Sexo</span><span className="font-medium">{anamnese.sexo === 'M' ? 'Masculino' : 'Feminino'}</span></div>
-                      <div><span className="text-muted-foreground block text-xs">Nascimento</span><span className="font-medium">{anamnese.data_nascimento ? format(new Date(anamnese.data_nascimento), "dd/MM/yyyy") : "-"}</span></div>
-                      <div><span className="text-muted-foreground block text-xs">RG</span><span className="font-medium">{anamnese.rg || "-"}</span></div>
-                      <div><span className="text-muted-foreground block text-xs">Profissão</span><span className="font-medium">{anamnese.profissao || "-"}</span></div>
-                    </div>
-                    <div><span className="text-muted-foreground block text-xs">Endereço</span><span className="font-medium">{anamnese.endereco} (CEP: {anamnese.cep})</span></div>
-                  </CardContent>
-                </Card>
+              <>
+                <div className="flex justify-end">
+                  <AlertDialog open={newAnamneseDialogOpen} onOpenChange={setNewAnamneseDialogOpen}>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="outline" size="sm" className="gap-2 text-amber-600 border-amber-500/50 hover:bg-amber-500/10 hover:text-amber-700">
+                        <RefreshCw className="h-4 w-4" />
+                        Solicitar Nova Anamnese
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Solicitar Nova Anamnese?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          A anamnese atual será apagada e o aluno precisará preencher uma nova ao acessar o app. Esta ação não pode ser desfeita.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel disabled={requestingNewAnamnese}>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleRequestNewAnamnese}
+                          disabled={requestingNewAnamnese}
+                          className="bg-amber-600 hover:bg-amber-700 gap-2"
+                        >
+                          {requestingNewAnamnese ? (
+                            <><Loader2 className="h-4 w-4 animate-spin" /> Processando...</>
+                          ) : (
+                            "Confirmar"
+                          )}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
 
-                <Card className={anamnese.comorbidades || anamnese.limitacao_cirurgia ? "border-amber-500/50 bg-amber-500/5" : ""}>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <AlertCircle className="h-4 w-4 text-amber-500" /> Saúde e Limitações
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4 text-sm">
-                    <div>
-                      <span className="text-muted-foreground block text-xs font-medium">Comorbidades</span>
-                      <p className="font-medium mt-1">{anamnese.comorbidades || "Nenhuma relatada."}</p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground block text-xs font-medium">Limitações / Cirurgias</span>
-                      <p className="font-medium mt-1">{anamnese.limitacao_cirurgia || "Nenhuma relatada."}</p>
-                    </div>
-                    {anamnese.limitacao_arquivo_url && (
-                      <a href={anamnese.limitacao_arquivo_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 px-3 py-1.5 rounded-md transition-colors">
-                        <Download className="h-3 w-3" /> Ver exame anexado
-                      </a>
-                    )}
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-primary" /> Rotina e Treino
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3 text-sm">
-                    <div><span className="text-muted-foreground block text-xs">Trabalho</span><span className="font-medium">{anamnese.horas_trabalho}</span></div>
-                    <div><span className="text-muted-foreground block text-xs">Sono</span><span className="font-medium">{anamnese.horas_sono}</span></div>
-                    <div className="pt-2 border-t border-border/50">
-                      <span className="text-muted-foreground block text-xs">Dias na semana</span><span className="font-medium">{anamnese.dias_treino_semana}</span>
-                    </div>
-                    <div><span className="text-muted-foreground block text-xs">Tempo por dia</span><span className="font-medium">{anamnese.tempo_treino_dia}</span></div>
-                    <div><span className="text-muted-foreground block text-xs">Disponibilidade p/ Cardio</span><span className="font-medium">{anamnese.disponibilidade_cardio}</span></div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4 text-primary" /> Objetivos
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4 text-sm">
-                    <div>
-                      <span className="text-muted-foreground block text-xs font-medium">Objetivo</span>
-                      <p className="font-medium mt-1">{anamnese.objetivo}</p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground block text-xs font-medium">Exercícios preferidos (ou que não gosta)</span>
-                      <p className="font-medium mt-1">{anamnese.exercicios_preferidos}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {anamnese.fotos && anamnese.fotos.length > 0 && (
-                  <Card className="md:col-span-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Card>
                     <CardHeader className="pb-3">
                       <CardTitle className="text-base flex items-center gap-2">
-                        <Camera className="h-4 w-4 text-primary" /> Fotos de Avaliação
+                        <FileText className="h-4 w-4 text-primary" /> Dados Pessoais
                       </CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                        {anamnese.fotos.map((foto, index) => (
-                          <a key={index} href={foto} target="_blank" rel="noopener noreferrer" className="block rounded-md overflow-hidden border hover:opacity-90 transition-opacity">
-                            <img src={foto} alt={`Foto ${index + 1}`} className="w-full h-40 object-cover" />
-                          </a>
-                        ))}
+                    <CardContent className="space-y-3 text-sm">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="col-span-2"><span className="text-muted-foreground block text-xs">E-mail</span><span className="font-medium break-all">{student.email}</span></div>
+                        <div><span className="text-muted-foreground block text-xs">Telefone</span><span className="font-medium">{student.phone || "-"}</span></div>
+                        <div><span className="text-muted-foreground block text-xs">CPF</span><span className="font-medium">{student.cpf || "-"}</span></div>
+                        <div><span className="text-muted-foreground block text-xs">Sexo</span><span className="font-medium">{anamnese.sexo === 'M' ? 'Masculino' : 'Feminino'}</span></div>
+                        <div><span className="text-muted-foreground block text-xs">Nascimento</span><span className="font-medium">{anamnese.data_nascimento ? format(new Date(anamnese.data_nascimento), "dd/MM/yyyy") : "-"}</span></div>
+                        <div><span className="text-muted-foreground block text-xs">RG</span><span className="font-medium">{anamnese.rg || "-"}</span></div>
+                        <div><span className="text-muted-foreground block text-xs">Profissão</span><span className="font-medium">{anamnese.profissao || "-"}</span></div>
+                      </div>
+                      <div><span className="text-muted-foreground block text-xs">Endereço</span><span className="font-medium">{anamnese.endereco} (CEP: {anamnese.cep})</span></div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className={anamnese.comorbidades || anamnese.limitacao_cirurgia ? "border-amber-500/50 bg-amber-500/5" : ""}>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4 text-amber-500" /> Saúde e Limitações
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4 text-sm">
+                      <div>
+                        <span className="text-muted-foreground block text-xs font-medium">Comorbidades</span>
+                        <p className="font-medium mt-1">{anamnese.comorbidades || "Nenhuma relatada."}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground block text-xs font-medium">Limitações / Cirurgias</span>
+                        <p className="font-medium mt-1">{anamnese.limitacao_cirurgia || "Nenhuma relatada."}</p>
+                      </div>
+                      {anamnese.limitacao_arquivo_url && (
+                        <a href={anamnese.limitacao_arquivo_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 px-3 py-1.5 rounded-md transition-colors">
+                          <Download className="h-3 w-3" /> Ver exame anexado
+                        </a>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-primary" /> Rotina e Treino
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3 text-sm">
+                      <div><span className="text-muted-foreground block text-xs">Trabalho</span><span className="font-medium">{anamnese.horas_trabalho}</span></div>
+                      <div><span className="text-muted-foreground block text-xs">Sono</span><span className="font-medium">{anamnese.horas_sono}</span></div>
+                      <div className="pt-2 border-t border-border/50">
+                        <span className="text-muted-foreground block text-xs">Dias na semana</span><span className="font-medium">{anamnese.dias_treino_semana}</span>
+                      </div>
+                      <div><span className="text-muted-foreground block text-xs">Tempo por dia</span><span className="font-medium">{anamnese.tempo_treino_dia}</span></div>
+                      <div><span className="text-muted-foreground block text-xs">Disponibilidade p/ Cardio</span><span className="font-medium">{anamnese.disponibilidade_cardio}</span></div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4 text-primary" /> Objetivos
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4 text-sm">
+                      <div>
+                        <span className="text-muted-foreground block text-xs font-medium">Objetivo</span>
+                        <p className="font-medium mt-1">{anamnese.objetivo}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground block text-xs font-medium">Exercícios preferidos (ou que não gosta)</span>
+                        <p className="font-medium mt-1">{anamnese.exercicios_preferidos}</p>
                       </div>
                     </CardContent>
                   </Card>
-                )}
-              </div>
+
+                  {anamnese.fotos && anamnese.fotos.length > 0 && (
+                    <Card className="md:col-span-2">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <Camera className="h-4 w-4 text-primary" /> Fotos de Avaliação
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                          {anamnese.fotos.map((foto, index) => (
+                            <a key={index} href={foto} target="_blank" rel="noopener noreferrer" className="block rounded-md overflow-hidden border hover:opacity-90 transition-opacity">
+                              <img src={foto} alt={`Foto ${index + 1}`} className="w-full h-40 object-cover" />
+                            </a>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              </>
             ) : (
               <div className="text-center py-12 border border-dashed rounded-lg">
                 <ClipboardList className="h-8 w-8 text-muted-foreground mx-auto mb-3 opacity-50" />

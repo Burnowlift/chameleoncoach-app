@@ -434,19 +434,11 @@ interface SessionsViewProps {
 function SessionsView({ student, block, week, logs, notes, onUpsertLog, onAddNote, onDeleteNote, onAddRmRecord, isWeekCompleted, onToggleWeekCompleted, onRefreshStudent }: SessionsViewProps) {
   const sessions = block.weekSessions?.[week] || block.sessions;
   const [noteInputs, setNoteInputs] = useState<Record<string, string>>({});
-  const [setsDataInputs, setSetsDataInputs] = useState<Record<string, {weight: string, reps: string}[]>>({});
+  const [setsDataInputs, setSetsDataInputs] = useState<Record<string, {weight: string, reps: string, rpe: string}[]>>({});
+
   const [videoUrls, setVideoUrls] = useState<Record<string, string>>({});
   const [exerciseTags, setExerciseTags] = useState<Record<string, ("squat" | "bench" | "deadlift")[]>>({});
   const [exerciseDbIds, setExerciseDbIds] = useState<Record<string, string>>({});
-  const [openRpePopover, setOpenRpePopover] = useState<string | null>(null);
-
-  // Close RPE popover automatically when user scrolls (avoids stuck overlay on mobile)
-  useEffect(() => {
-    if (!openRpePopover) return;
-    const handleScroll = () => setOpenRpePopover(null);
-    window.addEventListener("scroll", handleScroll, { passive: true, capture: true });
-    return () => window.removeEventListener("scroll", handleScroll, { capture: true } as any);
-  }, [openRpePopover]);
 
   // Fetch video URLs and RM tags for exercises by name (session exercise IDs are instance IDs, not DB IDs)
   useEffect(() => {
@@ -491,17 +483,18 @@ function SessionsView({ student, block, week, logs, notes, onUpsertLog, onAddNot
 
   // Initialize sets inputs from existing logs
   useEffect(() => {
-    const initial: Record<string, {weight: string, reps: string}[]> = {};
+    const initial: Record<string, {weight: string, reps: string, rpe: string}[]> = {};
     logs.forEach(log => {
       if (log.blockId === block.id && log.weekNumber === week) {
         const key = `${log.sessionId}-${log.exerciseId}`;
         if (log && log.setsData && log.setsData.length > 0) {
           initial[key] = log.setsData.map(s => ({
             weight: s?.weight ? String(s.weight) : "",
-            reps: s?.reps ? String(s.reps) : ""
+            reps: s?.reps ? String(s.reps) : "",
+            rpe: s?.rpe != null ? String(s.rpe) : (log.actualRpe != null ? String(log.actualRpe) : "")
           }));
         } else if (log && log.weight > 0) {
-          initial[key] = [{ weight: String(log.weight), reps: "" }];
+          initial[key] = [{ weight: String(log.weight), reps: "", rpe: log.actualRpe != null ? String(log.actualRpe) : "" }];
         }
       }
     });
@@ -517,7 +510,7 @@ function SessionsView({ student, block, week, logs, notes, onUpsertLog, onAddNot
   const commitSetsData = async (
     sessionId: string,
     exerciseId: string,
-    setsData: {weight: string, reps: string}[],
+    setsData: {weight: string, reps: string, rpe: string}[],
     expectedRepsFromExercise?: number
   ) => {
     const log = getLog(sessionId, exerciseId);
@@ -527,11 +520,13 @@ function SessionsView({ student, block, week, logs, notes, onUpsertLog, onAddNot
       .map((s, i) => ({
         setIndex: i + 1,
         weight: Number(s.weight),
-        reps: Number(s.reps) || 0
+        reps: Number(s.reps) || 0,
+        rpe: s.rpe ? Number(s.rpe) : null
       }));
 
     const maxWeight = parsedSetsData.reduce((max, s) => Math.max(max, s.weight), 0);
     const isCompleted = parsedSetsData.length > 0;
+    const maxSetRpe = parsedSetsData.reduce((max, s) => (s.rpe != null && s.rpe > (max ?? 0)) ? s.rpe : max, null as number | null);
 
     try {
       await onUpsertLog({
@@ -543,16 +538,13 @@ function SessionsView({ student, block, week, logs, notes, onUpsertLog, onAddNot
         weight: maxWeight,
         notes: log?.notes ?? null,
         completed: isCompleted,
-        actualRpe: isCompleted ? (log?.actualRpe ?? null) : null,
+        actualRpe: maxSetRpe ?? (log?.actualRpe ?? null),
         setsData: parsedSetsData
       });
 
       if (isCompleted) {
         const tags = exerciseTags[exerciseId] || [];
-        const perceivedRpe = log?.actualRpe ?? null;
-        const tableRpe = perceivedRpe != null ? snapToTableRpe(perceivedRpe) : null;
-        
-        if (tags.length > 0 && tableRpe != null) {
+        if (tags.length > 0) {
           for (const tag of tags) {
             let maxEst1rm = 0;
             let bestWeight = 0;
@@ -560,7 +552,10 @@ function SessionsView({ student, block, week, logs, notes, onUpsertLog, onAddNot
 
             for (const s of parsedSetsData) {
               const repsToUse = s.reps > 0 ? s.reps : (expectedRepsFromExercise || 1);
-              if (repsToUse <= 4 && tableRpe >= 7) {
+              const rpeToUse = s.rpe != null ? s.rpe : (log?.actualRpe ?? null);
+              const tableRpe = rpeToUse != null ? snapToTableRpe(rpeToUse) : null;
+
+              if (tableRpe != null && repsToUse <= 4 && tableRpe >= 7) {
                 const est = calculate1RMFromRpe(tag, s.weight, repsToUse, tableRpe);
                 if (est > maxEst1rm) {
                   maxEst1rm = est;
@@ -738,7 +733,7 @@ function SessionsView({ student, block, week, logs, notes, onUpsertLog, onAddNot
                       <div className="space-y-2">
                         {Array.from({ length: Number(ex.sets) || 1 }).map((_, i) => {
                           const setInputs = setsDataInputs[key] || [];
-                          const currentSet = setInputs[i] || { weight: "", reps: "" };
+                          const currentSet = setInputs[i] || { weight: "", reps: "", rpe: "" };
                           return (
                             <div key={i} className="flex gap-2 items-center">
                               <span className="text-xs font-medium text-muted-foreground w-12 shrink-0">Série {i + 1}</span>
@@ -758,7 +753,7 @@ function SessionsView({ student, block, week, logs, notes, onUpsertLog, onAddNot
                                     const newVal = e.target.value;
                                     setSetsDataInputs(prev => {
                                       const arr = [...(prev[key] || [])];
-                                      while (arr.length <= i) arr.push({ weight: "", reps: "" });
+                                      while (arr.length <= i) arr.push({ weight: "", reps: "", rpe: "" });
                                       arr[i] = { ...arr[i], weight: newVal };
                                       return { ...prev, [key]: arr };
                                     });
@@ -769,18 +764,21 @@ function SessionsView({ student, block, week, logs, notes, onUpsertLog, onAddNot
                                   <Check className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-green-600" />
                                 )}
                               </div>
-                              <div className="relative flex-[0.7]">
+                              <div className={`relative ${ex.trackingType === "time" ? "flex-1" : "flex-[0.7]"}`}>
+                                {ex.trackingType === "time" && (
+                                  <Weight className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                                )}
                                 <Input
                                   type="number"
                                   inputMode="decimal"
-                                  placeholder="Reps"
-                                  className="h-10 sm:h-9 text-base sm:text-sm px-2 w-full"
+                                  placeholder={ex.trackingType === "time" ? "Carga (kg)" : "Reps"}
+                                  className={`h-10 sm:h-9 text-base sm:text-sm pr-2 w-full ${ex.trackingType === "time" ? "pl-7" : "px-2"}`}
                                   value={currentSet.reps}
                                   onChange={(e) => {
                                     const newVal = e.target.value;
                                     setSetsDataInputs(prev => {
                                       const arr = [...(prev[key] || [])];
-                                      while (arr.length <= i) arr.push({ weight: "", reps: "" });
+                                      while (arr.length <= i) arr.push({ weight: "", reps: "", rpe: "" });
                                       arr[i] = { ...arr[i], reps: newVal };
                                       return { ...prev, [key]: arr };
                                     });
@@ -788,63 +786,37 @@ function SessionsView({ student, block, week, logs, notes, onUpsertLog, onAddNot
                                   onBlur={() => commitSetsData(session.id, ex.id, setsDataInputs[key] || [], Number(ex.reps) || 1)}
                                 />
                               </div>
+                              <div className="relative flex-[0.7] shrink-0">
+                                <select
+                                  className={`h-10 sm:h-9 text-xs sm:text-sm px-1 sm:px-2 rounded-md border bg-background w-full cursor-pointer focus:outline-none focus:ring-1 focus:ring-amber-500/50 ${
+                                    currentSet.rpe ? "border-amber-500/80 font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10" : "text-muted-foreground"
+                                  }`}
+                                  value={currentSet.rpe || ""}
+                                  onChange={(e) => {
+                                    const newVal = e.target.value;
+                                    let nextSets = [...(setsDataInputs[key] || [])];
+                                    while (nextSets.length <= i) nextSets.push({ weight: "", reps: "", rpe: "" });
+                                    nextSets[i] = { ...nextSets[i], rpe: newVal };
+                                    setSetsDataInputs(prev => ({ ...prev, [key]: nextSets }));
+                                    commitSetsData(session.id, ex.id, nextSets, Number(ex.reps) || 1);
+                                  }}
+                                >
+                                  <option value="">RPE</option>
+                                  <option value="6">RPE 6</option>
+                                  <option value="6.5">RPE 6.5</option>
+                                  <option value="7">RPE 7</option>
+                                  <option value="7.5">RPE 7.5</option>
+                                  <option value="8">RPE 8</option>
+                                  <option value="8.5">RPE 8.5</option>
+                                  <option value="9">RPE 9</option>
+                                  <option value="9.5">RPE 9.5</option>
+                                  <option value="10">RPE 10</option>
+                                </select>
+                              </div>
                             </div>
                           );
                         })}
                       </div>
-                      <Popover
-                        open={openRpePopover === key}
-                        onOpenChange={(open) => setOpenRpePopover(open ? key : null)}
-                      >
-                        <PopoverTrigger asChild>
-                          <Button
-                            size="sm"
-                            variant={log?.actualRpe != null ? "default" : "outline"}
-                            
-                            className={`h-11 sm:h-9 w-full gap-1 text-sm ${log?.actualRpe != null ? "bg-amber-500 hover:bg-amber-600 text-white border-amber-500" : ""}`}
-                          >
-                            <Gauge className="h-4 w-4" />
-                            {log?.actualRpe != null ? `RPE percebido: ${log.actualRpe}` : "RPE percebido"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent
-                          className="w-[min(16rem,calc(100vw-1.5rem))] p-3"
-                          align="center"
-                          sideOffset={6}
-                          collisionPadding={12}
-                        >
-                          <p className="text-xs font-medium mb-2">Como você sentiu? (RPE)</p>
-                          <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
-                            {[5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10].map(v => (
-                              <Button
-                                key={v}
-                                size="sm"
-                                variant={log?.actualRpe === v ? "default" : "outline"}
-                                className="h-11 sm:h-9 px-0 text-sm"
-                                onClick={() => {
-                                  handleSaveActualRpe(session.id, ex.id, v, Number(ex.reps) || 1);
-                                  setOpenRpePopover(null);
-                                }}
-                              >
-                                {v}
-                              </Button>
-                            ))}
-                          </div>
-                          {log?.actualRpe != null && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="w-full mt-2 h-9 text-xs text-muted-foreground"
-                              onClick={() => {
-                                handleSaveActualRpe(session.id, ex.id, null, Number(ex.reps) || 1);
-                                setOpenRpePopover(null);
-                              }}
-                            >
-                              Limpar RPE
-                            </Button>
-                          )}
-                        </PopoverContent>
-                      </Popover>
                     </div>
                   </div>
 

@@ -42,9 +42,9 @@ function EntryCard({ entry, pos, isMe }: { entry: RankingEntry; pos: number; isM
         </Avatar>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2 mb-1">
-            <p className="font-semibold truncate">
-              {entry.name} {isMe && <Badge variant="outline" className="ml-1">Você</Badge>}
-            </p>
+            <div className="font-semibold truncate flex items-center gap-1">
+              <span>{entry.name}</span> {isMe && <Badge variant="outline" className="ml-1">Você</Badge>}
+            </div>
             <div className="flex flex-col items-end">
               <p className="text-xl font-black text-primary tabular-nums tracking-tight">
                 {entry.score.toFixed(0)} <span className="text-xs font-semibold text-muted-foreground ml-0.5">XP</span>
