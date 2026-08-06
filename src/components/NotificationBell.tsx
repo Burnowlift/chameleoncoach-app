@@ -53,10 +53,10 @@ export function NotificationBell() {
           <span className="hidden sm:inline">Notificações</span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-[340px] p-0">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+      <PopoverContent align="end" className="w-[min(340px,calc(100vw-2rem))] p-0">
+        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 px-4 py-3 border-b border-border">
           <p className="text-sm font-semibold">Notificações</p>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 flex-wrap">
             {"PushManager" in window && (
               <Button
                 variant="ghost"
@@ -66,7 +66,7 @@ export function NotificationBell() {
                 title={push.enabled ? "Desativar notificações push" : "Ativar notificações push"}
               >
                 {push.enabled ? <BellRing className="h-3.5 w-3.5 text-primary" /> : <BellOff className="h-3.5 w-3.5" />}
-                {push.enabled ? "Push ativo" : "Ativar push"}
+                <span className="hidden sm:inline">{push.enabled ? "Push ativo" : "Ativar push"}</span>
               </Button>
             )}
             {unread > 0 && (
@@ -77,7 +77,8 @@ export function NotificationBell() {
                 onClick={markAllAsRead}
               >
                 <CheckCheck className="h-3.5 w-3.5" />
-                Marcar todas como lidas
+                <span className="sm:hidden">Ler todas</span>
+                <span className="hidden sm:inline">Marcar todas como lidas</span>
               </Button>
             )}
           </div>
@@ -109,8 +110,8 @@ export function NotificationBell() {
                     <Icon className="h-4 w-4" />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-medium leading-snug">{n.title}</span>
-                    {n.body && <span className="block text-xs text-muted-foreground mt-0.5 leading-snug">{n.body}</span>}
+                    <span className="block text-sm font-medium leading-snug break-words">{n.title}</span>
+                    {n.body && <span className="block text-xs text-muted-foreground mt-0.5 leading-snug break-words">{n.body}</span>}
                     <span className="block text-[10px] text-muted-foreground/70 mt-1">
                       {format(new Date(n.createdAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                     </span>

@@ -159,7 +159,7 @@ const StudentAnamnese = () => {
         <header className="border-b border-border bg-card sticky top-0 z-10">
           <div className="max-w-2xl mx-auto px-4 py-3 space-y-2">
             <div className="flex items-center justify-between">
-              <h1 className="text-lg font-semibold">Anamnese</h1>
+              <h1 className="text-lg font-semibold min-w-0 truncate">Anamnese</h1>
               <span className="text-sm text-muted-foreground">
                 Etapa {step} de {TOTAL_STEPS}
               </span>

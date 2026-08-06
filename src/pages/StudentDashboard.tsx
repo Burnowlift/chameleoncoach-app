@@ -255,9 +255,9 @@ const StudentDashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-3 sm:px-4 py-3 flex items-center justify-between">
-          <p className="text-sm font-medium text-muted-foreground">{student.plan}</p>
-          <div className="flex items-center gap-2">
+        <div className="max-w-4xl mx-auto px-3 sm:px-4 py-3 flex items-center justify-between gap-2">
+          <p className="text-sm font-medium text-muted-foreground min-w-0 flex-1 truncate">{student.plan}</p>
+          <div className="flex items-center gap-2 shrink-0">
             <NotificationBell />
             <Button
               variant="ghost"

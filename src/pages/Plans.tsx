@@ -118,14 +118,16 @@ const Plans = () => {
           {plans.map((plan) => (
             <Card key={plan.id} className="hover:border-primary/30 transition-colors">
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">
-                    {plan.name}
-                    {plan.duration && (
-                      <span className="text-sm font-normal text-muted-foreground"> · {plan.duration}</span>
-                    )}
-                  </CardTitle>
-                  <Badge variant="secondary">{liveCount(plan)} aluno{liveCount(plan) !== 1 ? "s" : ""}</Badge>
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="min-w-0 flex-1">
+                    <CardTitle className="text-lg truncate">
+                      {plan.name}
+                      {plan.duration && (
+                        <span className="text-sm font-normal text-muted-foreground"> · {plan.duration}</span>
+                      )}
+                    </CardTitle>
+                  </div>
+                  <Badge variant="secondary" className="shrink-0">{liveCount(plan)} aluno{liveCount(plan) !== 1 ? "s" : ""}</Badge>
                 </div>
                 <p className="text-sm font-medium text-muted-foreground">
                   Duração: <span className="text-foreground">{plan.duration || "Mensal"}</span>
