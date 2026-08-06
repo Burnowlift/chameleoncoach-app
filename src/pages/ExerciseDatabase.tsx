@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Trash2, Search, Dumbbell, Play, Pencil } from "lucide-react";
+import { Plus, Trash2, Search, Dumbbell, Play, Pencil, X } from "lucide-react";
 import { toast } from "sonner";
 import { useExercises } from "@/hooks/useExercises";
 import type { ExerciseDBItem } from "@/lib/mock-data";
@@ -198,7 +198,22 @@ const ExerciseDatabase = () => {
         <div className="flex gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Buscar exercício..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+            <Input
+              placeholder="Buscar exercício..."
+              className="pl-9 pr-8"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                aria-label="Limpar busca"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
           <Select value={filterGroup} onValueChange={setFilterGroup}>
             <SelectTrigger className="w-[180px]">

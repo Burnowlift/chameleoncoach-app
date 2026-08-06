@@ -12,8 +12,10 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 import { useAnamnese } from "@/hooks/useAnamnese";
+import { SignedAnamneseImg, SignedAnamneseLink, SignedAnamnesePhoto } from "@/components/SignedAnamneseFile";
 import { useStudentCheckins } from "@/hooks/useCheckins";
 import { StudentWorkoutPage } from "@/components/StudentWorkoutDialog";
+import { StudentHistoryTimeline } from "@/components/StudentHistoryTimeline";
 import { StudentMobilityContent } from "@/pages/StudentMobility";
 import { StudentNotesTab } from "@/components/StudentNotesTab";
 import { BodyWeightHistorySection } from "@/components/BodyWeightHistorySection";
@@ -231,9 +233,9 @@ export default function StudentProfile() {
                         <p className="font-medium mt-1">{anamnese.limitacao_cirurgia || "Nenhuma relatada."}</p>
                       </div>
                       {anamnese.limitacao_arquivo_url && (
-                        <a href={anamnese.limitacao_arquivo_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 px-3 py-1.5 rounded-md transition-colors">
+                        <SignedAnamneseLink href={anamnese.limitacao_arquivo_url} className="inline-flex items-center gap-2 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 px-3 py-1.5 rounded-md transition-colors">
                           <Download className="h-3 w-3" /> Ver exame anexado
-                        </a>
+                        </SignedAnamneseLink>
                       )}
                     </CardContent>
                   </Card>
@@ -283,9 +285,7 @@ export default function StudentProfile() {
                       <CardContent>
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                           {anamnese.fotos.map((foto, index) => (
-                            <a key={index} href={foto} target="_blank" rel="noopener noreferrer" className="block rounded-md overflow-hidden border hover:opacity-90 transition-opacity">
-                              <img src={foto} alt={`Foto ${index + 1}`} className="w-full h-40 object-cover" />
-                            </a>
+                            <SignedAnamnesePhoto key={index} path={foto} alt={`Foto ${index + 1}`} />
                           ))}
                         </div>
                       </CardContent>
@@ -436,7 +436,22 @@ export default function StudentProfile() {
           </TabsContent>
 
           {/* ABA TREINOS */}
-          <TabsContent value="treinos" className="mt-6">
+          <TabsContent value="treinos" className="mt-6 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                  Histórico de Treinos
+                </CardTitle>
+                <CardDescription>
+                  Linha do tempo consolidada das semanas com execução registrada — aderência, volume e atalho para a semana.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <StudentHistoryTimeline studentId={studentId!} />
+              </CardContent>
+            </Card>
+
             <div className="border border-border rounded-lg bg-card overflow-hidden">
               <StudentWorkoutPage student={student} onBack={() => navigate("/students")} />
             </div>

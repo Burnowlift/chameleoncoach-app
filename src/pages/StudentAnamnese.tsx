@@ -12,6 +12,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Progress } from "@/components/ui/progress";
 import { Loader2, ArrowLeft, ArrowRight, CheckCircle2, Upload, AlertCircle } from "lucide-react";
 import AnimatedPage from "@/components/AnimatedPage";
+import { SignedAnamneseImg } from "@/components/SignedAnamneseFile";
 import { Helmet } from "react-helmet-async";
 import { toast } from "sonner";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
@@ -158,7 +159,7 @@ const StudentAnamnese = () => {
         <header className="border-b border-border bg-card sticky top-0 z-10">
           <div className="max-w-2xl mx-auto px-4 py-3 space-y-2">
             <div className="flex items-center justify-between">
-              <h1 className="text-lg font-semibold">Anamnese</h1>
+              <h1 className="text-lg font-semibold min-w-0 truncate">Anamnese</h1>
               <span className="text-sm text-muted-foreground">
                 Etapa {step} de {TOTAL_STEPS}
               </span>
@@ -208,7 +209,7 @@ const StudentAnamnese = () => {
                 </div>
 
                 <div className="space-y-3">
-                  <Label className="font-medium">Sexo biológico *</Label>
+                  <Label className="font-medium">Sexo *</Label>
                   <p className="text-xs text-muted-foreground">Usado para personalizar seu protocolo de treino e modelos de referência.</p>
                   <RadioGroup
                     value={formData.sexo || ""}
@@ -506,7 +507,7 @@ const StudentAnamnese = () => {
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-4">
                       {formData.fotos.map((foto, index) => (
                         <div key={index} className="relative group rounded-md overflow-hidden border">
-                          <img src={foto} alt={`Sua foto ${index + 1}`} className="w-full h-32 object-cover" />
+                          <SignedAnamneseImg src={foto} alt={`Sua foto ${index + 1}`} className="w-full h-32 object-cover" />
                           <button
                             className="absolute top-1 right-1 bg-black/60 hover:bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                             onClick={(e) => {

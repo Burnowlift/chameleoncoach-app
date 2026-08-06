@@ -190,10 +190,9 @@ export function useAnamnese(studentId: string | undefined) {
       .from("anamnese-files")
       .upload(path, file, { upsert: true });
     if (error) throw error;
-    const { data: urlData } = supabase.storage
-      .from("anamnese-files")
-      .getPublicUrl(data.path);
-    return urlData.publicUrl;
+    // O bucket é privado: armazenamos o caminho relativo; a exibição
+    // resolve via signed URL (ver useSignedFileUrl).
+    return data.path;
   };
 
   const fallbackAnamnese = React.useMemo(() => {

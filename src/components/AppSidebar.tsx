@@ -3,7 +3,7 @@ import chameleonLogo from "@/assets/chameleon-logo.png";
 import { ALL_MENUS } from "@/lib/admin";
 import { useMyPermissions } from "@/hooks/useCoachPermissions";
 import { useAuth } from "@/hooks/useAuth";
-import { LogOut } from "lucide-react";
+import { LogOut, Download } from "lucide-react";
 
 import {
   Sidebar,
@@ -67,6 +67,13 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="p-4 space-y-4">
+        <button
+          onClick={() => window.dispatchEvent(new Event("chameleon:open-install-dialog"))}
+          className="flex w-full items-center gap-2 px-2 py-1.5 text-sm font-medium text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent rounded-md transition-colors"
+        >
+          <Download className="h-4 w-4" />
+          {!collapsed && <span>Instalar app</span>}
+        </button>
         <button 
           onClick={() => signOut()}
           className="flex w-full items-center gap-2 px-2 py-1.5 text-sm font-medium text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent rounded-md transition-colors"

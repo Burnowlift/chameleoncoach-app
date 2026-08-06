@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { TrainingBlock, WorkoutSession } from "@/lib/mock-data";
+import { readCachedJson, writeCachedJson } from "@/lib/offline-cache";
+
+const cacheKey = (studentId: string) => `blocks:${studentId}`;
 
 export function useTrainingBlocks(studentId: string | undefined) {
   const [blocks, setBlocks] = useState<TrainingBlock[]>([]);
@@ -19,17 +22,21 @@ export function useTrainingBlocks(studentId: string | undefined) {
 
     if (error) {
       setFetchError(new Error(error.message));
+      const cached = readCachedJson<TrainingBlock[]>(cacheKey(studentId));
+      if (cached) setBlocks(cached);
     }
 
     if (data) {
-      setBlocks(data.map((row: any) => ({
+      const mapped = data.map((row: any) => ({
         id: row.id,
         name: row.name,
         frequency: row.frequency,
         duration: row.duration,
         sessions: row.sessions as WorkoutSession[],
         weekSessions: row.week_sessions as Record<number, WorkoutSession[]>,
-      })));
+      }));
+      setBlocks(mapped);
+      writeCachedJson(cacheKey(studentId), mapped);
     }
     setLoading(false);
   }, [studentId]);

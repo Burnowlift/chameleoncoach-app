@@ -118,7 +118,8 @@ const StudentRegister = () => {
     if (cpfError) { setError(cpfError); return; }
     if (!sex) { setError("Informe o seu sexo biológico."); return; }
 
-    if (password.length < 6) { setError("A senha precisa ter pelo menos 6 caracteres."); return; }
+    if (password.length < 8) { setError("A senha precisa ter pelo menos 8 caracteres."); return; }
+    if (!/[a-zA-Z]/.test(password) || !/\d/.test(password)) { setError("A senha precisa ter letras e números."); return; }
     if (password !== confirmPassword) { setError("As senhas não conferem."); return; }
     if (!acceptedTerms) { setError("Você precisa aceitar os termos para continuar."); return; }
 
@@ -336,7 +337,7 @@ const StudentRegister = () => {
 
                 {/* Sexo */}
                 <div className="space-y-2">
-                  <Label htmlFor="reg-sex">Sexo Biológico</Label>
+                  <Label htmlFor="reg-sex">Sexo</Label>
                   <Select value={sex} onValueChange={(v) => setSex(v as "M" | "F")} disabled={loading}>
                     <SelectTrigger id="reg-sex" className="w-full">
                       <SelectValue placeholder="Selecione..." />
@@ -359,7 +360,7 @@ const StudentRegister = () => {
                     <Input
                       id="reg-password"
                       type={showPassword ? "text" : "password"}
-                      placeholder="Mínimo 6 caracteres"
+                      placeholder="Mínimo 8 caracteres, com letras e números"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="pl-10 pr-10"

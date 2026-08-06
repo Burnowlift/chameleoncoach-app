@@ -31,6 +31,7 @@ interface Props {
 type Period = "30d" | "90d" | "6m" | "all";
 type SortKey = "date" | "weight" | "reps" | "e1rm";
 type SortDir = "asc" | "desc";
+type LiftKey = "squat" | "bench" | "deadlift";
 
 const LIFT_META = {
   squat: { label: "Agachamento", colorVar: "--lift-squat" },
@@ -54,6 +55,8 @@ export function RmEvolutionChart({ records, loading, onDeleteRecord }: Props) {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [compareMode, setCompareMode] = useState(false);
+  const [ma3, setMa3] = useState(false);
 
 
   const { fromDate, toDate } = useMemo(() => {
@@ -129,6 +132,55 @@ export function RmEvolutionChart({ records, loading, onDeleteRecord }: Props) {
     }));
   }, [records, fromDate, toDate, activeLift]);
 
+  // Dados para o modo "comparar 3 lifts": um ponto por data com os 3 valores (forward-fill)
+  const compareData = useMemo(() => {
+    const points: { date: string; label: string; squat: number; bench: number; deadlift: number }[] = [];
+    const last: Record<LiftKey, number> = { squat: 0, bench: 0, deadlift: 0 };
+    const sorted = [...records]
+      .filter(r => inRange(r.recordedAt))
+      .sort((a, b) => a.recordedAt.localeCompare(b.recordedAt));
+    for (const r of sorted) {
+      last[r.sbdType] = r.estimated1rm;
+      const prev = points[points.length - 1];
+      if (prev && prev.date === r.recordedAt) {
+        prev[r.sbdType] = r.estimated1rm;
+      } else {
+        points.push({
+          date: r.recordedAt,
+          label: format(new Date(r.recordedAt), "dd/MM", { locale: ptBR }),
+          squat: last.squat,
+          bench: last.bench,
+          deadlift: last.deadlift,
+        });
+      }
+    }
+    return points;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [records, fromDate, toDate]);
+
+  // Pontos que foram recordes pessoais (acumulado crescente) no lift ativo
+  const prPoints = useMemo(() => {
+    const set = new Set<string>();
+    let best = 0;
+    chartData.forEach(p => {
+      if (p.e1rm > best && p.e1rm > 0) {
+        best = p.e1rm;
+        set.add(p.label);
+      }
+    });
+    return set;
+  }, [chartData]);
+
+  // Série com média móvel de 3 pontos (apenas single-lift)
+  const chartDataWithMa = useMemo(() => {
+    if (!ma3 || chartData.length < 3) return chartData;
+    return chartData.map((p, i) => {
+      if (i === 0 || i === chartData.length - 1) return p;
+      const avg = (chartData[i - 1].e1rm + p.e1rm + chartData[i + 1].e1rm) / 3;
+      return { ...p, e1rm: Math.round(avg * 10) / 10 };
+    });
+  }, [chartData, ma3]);
+
   // Tabela: respeita filtros (lift + datas) + ordenação
   const tableRows = useMemo(() => {
     const filtered = records.filter((r) => {
@@ -182,26 +234,28 @@ export function RmEvolutionChart({ records, loading, onDeleteRecord }: Props) {
         </CardTitle>
 
         {/* Lift selector */}
-        <div className="flex gap-1 flex-wrap mt-2">
-          {(Object.keys(LIFT_META) as Array<keyof typeof LIFT_META>).map((k) => {
-            const active = activeLift === k;
-            return (
-              <button
-                key={k}
-                onClick={() => setActiveLift(k)}
-                className="h-7 text-xs px-3 rounded-md border transition-colors"
-                style={{
-                  background: active ? `hsl(var(${LIFT_META[k].colorVar}) / 0.18)` : "transparent",
-                  borderColor: active ? `hsl(var(${LIFT_META[k].colorVar}))` : "hsl(var(--border))",
-                  color: active ? `hsl(var(${LIFT_META[k].colorVar}))` : "hsl(var(--muted-foreground))",
-                  fontWeight: active ? 600 : 500,
-                }}
-              >
-                {LIFT_META[k].label}
-              </button>
-            );
-          })}
-        </div>
+        {!compareMode && (
+          <div className="flex gap-1 flex-wrap mt-2">
+            {(Object.keys(LIFT_META) as Array<keyof typeof LIFT_META>).map((k) => {
+              const active = activeLift === k;
+              return (
+                <button
+                  key={k}
+                  onClick={() => setActiveLift(k)}
+                  className="h-7 text-xs px-3 rounded-md border transition-colors"
+                  style={{
+                    background: active ? `hsl(var(${LIFT_META[k].colorVar}) / 0.18)` : "transparent",
+                    borderColor: active ? `hsl(var(${LIFT_META[k].colorVar}))` : "hsl(var(--border))",
+                    color: active ? `hsl(var(${LIFT_META[k].colorVar}))` : "hsl(var(--muted-foreground))",
+                    fontWeight: active ? 600 : 500,
+                  }}
+                >
+                  {LIFT_META[k].label}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {/* Period selector */}
         <div className="flex gap-1 flex-wrap mt-2 items-center">
@@ -216,6 +270,33 @@ export function RmEvolutionChart({ records, loading, onDeleteRecord }: Props) {
               {PERIOD_LABELS[p]}
             </Button>
           ))}
+          <span className="mx-1 h-4 w-px bg-border" />
+          <button
+            onClick={() => setCompareMode(m => !m)}
+            className={cn(
+              "h-7 text-xs px-3 rounded-md border transition-colors font-medium",
+              compareMode
+                ? "bg-jaguar-orange/15 border-jaguar-orange/60 text-jaguar-orange"
+                : "border-border/60 text-muted-foreground hover:border-border",
+            )}
+            title="Ver os 3 lifts no mesmo gráfico"
+          >
+            Comparar 3
+          </button>
+          {!compareMode && (
+            <button
+              onClick={() => setMa3(m => !m)}
+              className={cn(
+                "h-7 text-xs px-3 rounded-md border transition-colors font-medium",
+                ma3
+                  ? "bg-primary/10 border-primary/50 text-foreground"
+                  : "border-border/60 text-muted-foreground hover:border-border",
+              )}
+              title="Suavizar a curva com média móvel de 3 pontos"
+            >
+              Média móvel
+            </button>
+          )}
         </div>
       </CardHeader>
 
@@ -266,10 +347,78 @@ export function RmEvolutionChart({ records, loading, onDeleteRecord }: Props) {
         )}
 
         {/* Chart */}
-        {chartData.length > 0 ? (
+        {compareMode ? (
+          compareData.length > 0 ? (
+            <div className="h-[260px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={compareData} margin={{ top: 10, right: 12, left: -10, bottom: 0 }}>
+                  <defs>
+                    {(["squat", "bench", "deadlift"] as LiftKey[]).map((k) => (
+                      <linearGradient key={k} id={`grad-cmp-${k}`} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={`hsl(var(${LIFT_META[k].colorVar}))`} stopOpacity={0.5} />
+                        <stop offset="100%" stopColor={`hsl(var(${LIFT_META[k].colorVar}))`} stopOpacity={0} />
+                      </linearGradient>
+                    ))}
+                  </defs>
+                  <CartesianGrid strokeDasharray="2 6" vertical={false} stroke="hsl(var(--border))" opacity={0.4} />
+                  <XAxis dataKey="label" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} width={40} unit="kg" />
+                  <Tooltip
+                    cursor={{ stroke: "hsl(var(--muted-foreground))", strokeOpacity: 0.3, strokeWidth: 1 }}
+                    contentStyle={{
+                      background: "hsl(var(--popover))",
+                      border: "1px solid hsl(var(--border))",
+                      borderRadius: 8,
+                      color: "hsl(var(--foreground))",
+                      fontSize: 12,
+                      boxShadow: "0 8px 24px hsl(0 0% 0% / 0.5)",
+                    }}
+                    content={({ active, payload }) => {
+                      if (!active || !payload?.length) return null;
+                      const p = payload[0].payload as (typeof compareData)[number];
+                      return (
+                        <div className="space-y-1">
+                          <div className="font-semibold">
+                            {format(new Date(p.date), "dd 'de' MMMM, yyyy", { locale: ptBR })}
+                          </div>
+                          {(["squat", "bench", "deadlift"] as LiftKey[]).map((k) => (
+                            <div key={k} className="flex items-center justify-between gap-4">
+                              <span className="text-muted-foreground flex items-center gap-1.5">
+                                <span className="h-2 w-2 rounded-full" style={{ background: `hsl(var(${LIFT_META[k].colorVar}))` }} />
+                                {LIFT_META[k].label}
+                              </span>
+                              <span className="font-bold font-mono">{formatKg(p[k])}</span>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    }}
+                  />
+                  {(["squat", "bench", "deadlift"] as LiftKey[]).map((k) => (
+                    <Area
+                      key={k}
+                      type="monotone"
+                      dataKey={k}
+                      stroke={`hsl(var(${LIFT_META[k].colorVar}))`}
+                      strokeWidth={2}
+                      fill={`url(#grad-cmp-${k})`}
+                      dot={{ r: 2, fill: `hsl(var(${LIFT_META[k].colorVar}))`, stroke: "hsl(var(--background))", strokeWidth: 1 }}
+                      activeDot={{ r: 5 }}
+                    />
+                  ))}
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-8">
+              Sem dados para o período selecionado.
+            </p>
+          )
+        ) : (
+        chartData.length > 0 ? (
           <div className="h-[260px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 10, right: 12, left: -10, bottom: 0 }}>
+              <AreaChart data={chartDataWithMa} margin={{ top: 10, right: 12, left: -10, bottom: 0 }}>
                 <defs>
                   <linearGradient id={`grad-${activeLift}`} x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor={liftColor} stopOpacity={0.55} />
@@ -279,7 +428,7 @@ export function RmEvolutionChart({ records, loading, onDeleteRecord }: Props) {
                 <CartesianGrid strokeDasharray="2 6" vertical={false} stroke="hsl(var(--border))" opacity={0.4} />
                 <XAxis dataKey="label" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} width={40} unit="kg" />
-                {currentMaxLifted !== undefined && (
+                {currentMaxLifted !== undefined && !ma3 && (
                   <ReferenceLine
                     y={currentMaxLifted}
                     stroke={goldColor}
@@ -301,14 +450,21 @@ export function RmEvolutionChart({ records, loading, onDeleteRecord }: Props) {
                   content={({ active, payload }) => {
                     if (!active || !payload?.length) return null;
                     const p = payload[0].payload as (typeof chartData)[number];
+                    const isPr = prPoints.has(p.label);
                     return (
                       <div className="space-y-1">
                         <div className="font-semibold">
                           {format(new Date(p.date), "dd 'de' MMMM, yyyy", { locale: ptBR })}
                         </div>
+                        {isPr && (
+                          <div className="flex items-center gap-1 text-[10px] font-bold" style={{ color: goldColor }}>
+                            <Trophy className="h-3 w-3" /> Novo PR!
+                          </div>
+                        )}
                         <div className="flex items-center justify-between gap-4">
                           <span className="text-muted-foreground">
                             {activeLift === "total" ? "Total SBD" : "1RM estimado"}
+                            {ma3 ? " (média móvel)" : ""}
                           </span>
                           <span className="font-bold" style={{ color: liftColor }}>
                             {formatKg(p.e1rm)}
@@ -342,7 +498,31 @@ export function RmEvolutionChart({ records, loading, onDeleteRecord }: Props) {
                   stroke={liftColor}
                   strokeWidth={2.5}
                   fill={`url(#grad-${activeLift})`}
-                  dot={{ r: 3, fill: liftColor, stroke: "hsl(var(--background))", strokeWidth: 1.5 }}
+                  dot={(props: any) => {
+                    const isPr = prPoints.has(props.payload?.label);
+                    if (isPr) {
+                      return (
+                        <svg x={props.cx - 5} y={props.cy - 5} width={10} height={10} viewBox="0 0 24 24">
+                          <path
+                            d="M12 2l2.9 6.26 6.6.57-5 4.35 1.5 6.45L12 16.9 5.99 19.63l1.5-6.45-5-4.35 6.6-.57L12 2z"
+                            fill={goldColor}
+                            stroke="hsl(var(--background))"
+                            strokeWidth={1.5}
+                          />
+                        </svg>
+                      );
+                    }
+                    return (
+                      <circle
+                        cx={props.cx}
+                        cy={props.cy}
+                        r={3}
+                        fill={liftColor}
+                        stroke="hsl(var(--background))"
+                        strokeWidth={1.5}
+                      />
+                    );
+                  }}
                   activeDot={{ r: 6, fill: goldColor, stroke: liftColor, strokeWidth: 2 }}
                 />
               </AreaChart>
@@ -352,6 +532,7 @@ export function RmEvolutionChart({ records, loading, onDeleteRecord }: Props) {
           <p className="text-sm text-muted-foreground text-center py-8">
             Sem dados para o período selecionado.
           </p>
+        )
         )}
 
         {/* Histórico tabular com ordenação */}

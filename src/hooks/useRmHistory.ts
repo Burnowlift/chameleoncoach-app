@@ -13,6 +13,8 @@ export interface RmRecord {
 }
 
 import { calculate1RM, type LiftType } from "@/lib/rpe-tables";
+import { enqueueAction } from "@/lib/offline-queue";
+import { emitPrCelebration } from "@/lib/pr-celebration";
 
 /** Calcula 1RM via tabela RPE × Reps. */
 export function calculate1RMFromRpe(
@@ -67,6 +69,45 @@ export function useRmHistory(studentId: string | undefined) {
   }, [studentId, fetch]);
 
   const addRecord = async (record: Omit<RmRecord, "id" | "recordedAt">) => {
+    const prevBest = records
+      .filter(r => r.exerciseId === record.exerciseId && r.sbdType === record.sbdType)
+      .reduce((m, r) => Math.max(m, r.estimated1rm), 0);
+    const isNewPr = record.estimated1rm > prevBest;
+    const celebrate = () => {
+      if (!isNewPr) return;
+      const liftLabel = { squat: "Agachamento", bench: "Supino", deadlift: "Terra" }[record.sbdType];
+      emitPrCelebration({ liftLabel, e1rm: record.estimated1rm });
+    };
+
+    if (!navigator.onLine) {
+      await enqueueAction({
+        type: "add-rm-record",
+        payload: {
+          studentId: record.studentId,
+          exerciseId: record.exerciseId,
+          sbdType: record.sbdType,
+          weight: record.weight,
+          reps: record.reps,
+          estimated1rm: record.estimated1rm,
+        },
+        createdAt: new Date().toISOString(),
+      });
+      setRecords(prev => {
+        const next = [...prev.filter(x => !(x.exerciseId === record.exerciseId && x.sbdType === record.sbdType)), {
+          id: `local-rm-${Date.now()}`,
+          studentId: record.studentId,
+          exerciseId: record.exerciseId,
+          sbdType: record.sbdType,
+          weight: record.weight,
+          reps: record.reps,
+          estimated1rm: record.estimated1rm,
+          recordedAt: new Date().toISOString(),
+        }];
+        return next;
+      });
+      celebrate();
+      return;
+    }
     // 1. Verificar se já existe um registro de 1RM para este aluno, exercício e sbdType
     const { data: existingRecords } = await supabase
       .from("rm_history")
@@ -107,6 +148,7 @@ export function useRmHistory(studentId: string | undefined) {
           recordedAt: r.recorded_at,
         };
         setRecords(prev => prev.map(x => x.id === r.id ? updated : x));
+        celebrate();
       }
     } else {
       // 3. Se não existe, insere um novo registro
@@ -140,6 +182,7 @@ export function useRmHistory(studentId: string | undefined) {
           if (prev.some(x => x.id === r.id)) return prev;
           return [...prev, inserted];
         });
+        celebrate();
       }
     }
   };

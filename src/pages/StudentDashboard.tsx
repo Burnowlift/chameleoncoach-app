@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useTrainingBlocks } from "@/hooks/useTrainingBlocks";
 import { useExerciseLogs, type ExerciseSetLog } from "@/hooks/useExerciseLogs";
 import { useSessionNotes } from "@/hooks/useSessionNotes";
-import { useRmHistory, calculate1RMFromRpe } from "@/hooks/useRmHistory";
+import { useRmHistory, calculate1RMFromRpe, type RmRecord } from "@/hooks/useRmHistory";
 import { useRmBackfill } from "@/hooks/useRmBackfill";
 import { snapToTableRpe } from "@/lib/rpe-tables";
 
@@ -28,7 +28,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Dumbbell, LogOut, User, Loader2, ArrowLeft, MessageSquare, Weight, Send, Calendar, Check, Trash2, Play, CheckCircle2, Camera, Gauge, X, Timer, Trophy, TrendingUp } from "lucide-react";
+import { Dumbbell, LogOut, User, Loader2, ArrowLeft, MessageSquare, Weight, Send, Calendar, Check, Trash2, Play, CheckCircle2, Camera, Gauge, X, Timer, Trophy, TrendingUp, Download, History, ArrowUp, ArrowDown, Flame, BarChart3, Medal, ClipboardCheck } from "lucide-react";
+import { NotificationBell } from "@/components/NotificationBell";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { RmEvolutionChart } from "@/components/RmEvolutionChart";
 import { RpeReferenceTable } from "@/components/RpeReferenceTable";
@@ -44,6 +45,17 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { sbdTotal, formatKg } from "@/lib/utils";
 import { CheckinBanner } from "@/components/CheckinBanner";
+import { StudentBottomNav } from "@/components/StudentBottomNav";
+import { readCachedJson, writeCachedJson } from "@/lib/offline-cache";
+import { enqueueAction } from "@/lib/offline-queue";
+import { computeWorkoutStreak } from "@/lib/streaks";
+import { useAchievements } from "@/hooks/useAchievements";
+import { useCheckins } from "@/hooks/useCheckins";
+import { monthlyCheckinProgress } from "@/lib/checkin-metrics";
+import { RpeTrendChart } from "@/components/RpeTrendChart";
+import { WeeklyGoalRing } from "@/components/WeeklyGoalRing";
+import { AchievementsGrid } from "@/components/AchievementsGrid";
+import { startOfWeek, endOfWeek, isWithinInterval } from "date-fns";
 
 type View =
   | { type: "blocks" }
@@ -63,13 +75,13 @@ const StudentDashboard = () => {
   // Fetch student profile
   const refreshStudent = useCallback(async () => {
     if (!user) return;
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("students")
       .select("*")
       .eq("user_id", user.id)
       .maybeSingle();
 
-    if (data) {
+    if (!error && data) {
       setStudent({
         id: data.id, name: data.name, email: data.email,
         phone: data.phone || undefined, state: data.state || undefined,
@@ -80,6 +92,22 @@ const StudentDashboard = () => {
         deadlift1RM: Number(data.deadlift_1rm), renewalDay: data.renewal_day || undefined,
       });
       setAvatarUrl(data.avatar || null);
+      writeCachedJson(`student:${user.id}`, { student: data, avatar: data.avatar || null });
+    } else if (error) {
+      const cached = readCachedJson<{ student: any; avatar: string | null }>(`student:${user.id}`);
+      if (cached?.student) {
+        const data = cached.student;
+        setStudent({
+          id: data.id, name: data.name, email: data.email,
+          phone: data.phone || undefined, state: data.state || undefined,
+          plan: data.plan, planValue: Number(data.plan_value),
+          status: data.status as Student["status"],
+          joinedAt: data.joined_at, paymentDueDate: data.payment_due_date || "",
+          squat1RM: Number(data.squat_1rm), bench1RM: Number(data.bench_1rm),
+          deadlift1RM: Number(data.deadlift_1rm), renewalDay: data.renewal_day || undefined,
+        });
+        setAvatarUrl(cached.avatar);
+      }
     }
     setLoading(false);
   }, [user]);
@@ -95,17 +123,33 @@ const StudentDashboard = () => {
   const { notes, addNote, deleteNote } = useSessionNotes(student?.id);
   const { records: rmRecords, loading: rmLoading, addRecord: addRmRecord, deleteRecord: deleteRmRecord, refetch: refetchRm } = useRmHistory(student?.id);
   useRmBackfill(student?.id, refetchRm);
+  const { achievements } = useAchievements(logs, rmRecords);
+  const { pending: pendingCheckin, history: checkinHistory } = useCheckins(student?.id);
+
+  // Percentual de check-ins respondidos no mês (disponibilizados × respondidos)
+  const checkinProgress = useMemo(
+    () => monthlyCheckinProgress([...(pendingCheckin ? [pendingCheckin] : []), ...checkinHistory]),
+    [pendingCheckin, checkinHistory],
+  );
+
   const [completedWeeks, setCompletedWeeks] = useState<{ blockId: string; weekNumber: number }[]>([]);
 
   // Fetch completed weeks
   useEffect(() => {
     if (!student) return;
+    const key = `completed_weeks:${student.id}`;
     supabase
       .from("completed_weeks")
       .select("block_id, week_number")
       .eq("student_id", student.id)
-      .then(({ data }) => {
-        if (data) setCompletedWeeks(data.map(d => ({ blockId: d.block_id, weekNumber: d.week_number })));
+      .then(({ data, error }) => {
+        if (!error && data) {
+          setCompletedWeeks(data.map(d => ({ blockId: d.block_id, weekNumber: d.week_number })));
+          writeCachedJson(key, data.map(d => ({ blockId: d.block_id, weekNumber: d.week_number })));
+        } else if (error) {
+          const cached = readCachedJson<{ blockId: string; weekNumber: number }[]>(key);
+          if (cached) setCompletedWeeks(cached);
+        }
       });
   }, [student]);
 
@@ -115,16 +159,35 @@ const StudentDashboard = () => {
   const toggleWeekCompleted = async (blockId: string, week: number) => {
     if (!student) return;
     const completed = isWeekCompleted(blockId, week);
+    const applyLocal = (done: boolean) => {
+      setCompletedWeeks(prev => {
+        const next = done
+          ? [...prev.filter(cw => !(cw.blockId === blockId && cw.weekNumber === week)), { blockId, weekNumber: week }]
+          : prev.filter(cw => !(cw.blockId === blockId && cw.weekNumber === week));
+        writeCachedJson(`completed_weeks:${student.id}`, next);
+        return next;
+      });
+    };
+    if (!navigator.onLine) {
+      await enqueueAction({
+        type: "toggle-week",
+        payload: { studentId: student.id, blockId, weekNumber: week, completed: !completed },
+        createdAt: new Date().toISOString(),
+      });
+      applyLocal(!completed);
+      toast.info("Salvo offline — será sincronizado quando a conexão voltar.");
+      return;
+    }
     if (completed) {
       await supabase.from("completed_weeks").delete()
         .eq("student_id", student.id).eq("block_id", blockId).eq("week_number", week);
-      setCompletedWeeks(prev => prev.filter(cw => !(cw.blockId === blockId && cw.weekNumber === week)));
+      applyLocal(false);
       toast.error("Semana desmarcada!");
     } else {
       await supabase.from("completed_weeks").insert({
         student_id: student.id, block_id: blockId, week_number: week,
       });
-      setCompletedWeeks(prev => [...prev, { blockId, weekNumber: week }]);
+      applyLocal(true);
       toast.success("Semana concluída!");
     }
   };
@@ -169,12 +232,50 @@ const StudentDashboard = () => {
   const total = sbdTotal(student.squat1RM, student.bench1RM, student.deadlift1RM);
   const currentBlock = view.type !== "blocks" ? blocks.find(b => b.id === view.blockId) : null;
 
+  // Gamificação + resumo da semana
+  const streak = computeWorkoutStreak(logs);
+
+  const thisWeekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+  const thisWeekEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
+
+  const sessionsThisWeek = new Set(
+    logs
+      .filter(l => l.completed && isWithinInterval(new Date(l.createdAt), { start: thisWeekStart, end: thisWeekEnd }))
+      .map(l => `${l.blockId}-${l.weekNumber}-${l.sessionId}`),
+  ).size;
+
+  const goalTarget = blocks.length > 0 ? Math.max(...blocks.map(b => b.frequency || 0)) : 0;
+
+  const latestPr = rmRecords.reduce((best, r) => (!best || r.estimated1rm > best.estimated1rm ? r : best), null as RmRecord | null);
+  const prLiftLabel = latestPr ? { squat: "Agachamento", bench: "Supino", deadlift: "Terra" }[latestPr.sbdType] : null;
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-3 sm:px-4 py-3 flex items-center justify-between">
-          <p className="text-sm font-medium text-muted-foreground">{student.plan}</p>
-          <div className="flex items-center gap-2">
+        <div className="max-w-4xl mx-auto px-3 sm:px-4 py-3 flex items-center justify-between gap-2">
+          <p className="text-sm font-medium text-muted-foreground min-w-0 flex-1 truncate">{student.plan}</p>
+          <div className="flex items-center gap-2 shrink-0">
+            <NotificationBell />
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-2 text-muted-foreground"
+              onClick={() => navigate("/aluno/historico")}
+              title="Histórico de treinos"
+            >
+              <History className="h-4 w-4" />
+              <span className="hidden sm:inline">Histórico</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-2 text-muted-foreground"
+              onClick={() => window.dispatchEvent(new Event("chameleon:open-install-dialog"))}
+              title="Instalar o app"
+            >
+              <Download className="h-4 w-4" />
+              <span className="hidden sm:inline">Instalar app</span>
+            </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground">
@@ -207,7 +308,7 @@ const StudentDashboard = () => {
         onAvatarChange={setAvatarUrl}
       />
 
-      <main className="max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-5 sm:space-y-6">
+      <main className="max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-5 sm:space-y-6 pb-24 md:pb-6">
         {/* Profile */}
         <div className="flex flex-col items-center gap-2">
           <button onClick={() => setAvatarDialogOpen(true)} className="focus:outline-none hover-scale relative group">
@@ -240,6 +341,62 @@ const StudentDashboard = () => {
           <>
             <CheckinBanner studentId={student.id} />
 
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <Card><CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <Dumbbell className="h-4 w-4 text-primary" />
+                  <p className="text-xs text-muted-foreground">Treinos na semana</p>
+                </div>
+                <p className="text-xl font-bold">{sessionsThisWeek}</p>
+              </CardContent></Card>
+              <Card><CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <ClipboardCheck className="h-4 w-4 text-primary" />
+                  <p className="text-xs text-muted-foreground">Check-ins no mês</p>
+                </div>
+                <p className="text-xl font-bold">{checkinProgress.pct}%</p>
+                <p className="text-[11px] text-muted-foreground">
+                  {checkinProgress.total === 0
+                    ? "Nenhum check-in este mês"
+                    : `${checkinProgress.responded} de ${checkinProgress.total} respondidos`}
+                </p>
+              </CardContent></Card>
+              <Card><CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <Flame className={`h-4 w-4 ${streak.current > 0 ? "text-orange-500" : "text-muted-foreground"}`} />
+                  <p className="text-xs text-muted-foreground">Sequência</p>
+                </div>
+                <p className="text-xl font-bold">
+                  {streak.current > 0 ? `${streak.current} dia${streak.current > 1 ? "s" : ""} 🔥` : "—"}
+                </p>
+                {streak.best > 0 && streak.current !== streak.best && (
+                  <p className="text-[11px] text-muted-foreground">Recorde: {streak.best} dias</p>
+                )}
+              </CardContent></Card>
+              <Card><CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <Trophy className="h-4 w-4 text-amber-500" />
+                  <p className="text-xs text-muted-foreground">Maior 1RM</p>
+                </div>
+                {latestPr ? (
+                  <>
+                    <p className="text-xl font-bold">{formatKg(latestPr.estimated1rm)}</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {prLiftLabel} · {format(new Date(latestPr.recordedAt), "dd/MM/yy")}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-xl font-bold text-muted-foreground/40">—</p>
+                )}
+              </CardContent></Card>
+            </div>
+
+            {goalTarget > 0 && (
+              <Card><CardContent className="p-4">
+                <WeeklyGoalRing done={sessionsThisWeek} target={goalTarget} />
+              </CardContent></Card>
+            )}
+
             <div className="flex justify-center w-full mb-4">
               <div className="w-full max-w-xl">
                 <WeeklySummary studentId={student.id} />
@@ -263,10 +420,19 @@ const StudentDashboard = () => {
                 {blocksLoading ? (
                   <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
                 ) : blocks.length === 0 ? (
-                  <Card><CardContent className="py-12 text-center">
-                    <Dumbbell className="h-10 w-10 mx-auto text-muted-foreground/30" />
-                    <p className="text-muted-foreground mt-3">Nenhum bloco de treino disponível.</p>
-                    <p className="text-sm text-muted-foreground">Aguarde seu treinador montar seu programa.</p>
+                  <Card><CardContent className="py-12 text-center space-y-4">
+                    <div className="mx-auto w-16 h-16 rounded-2xl bg-muted flex items-center justify-center">
+                      <Dumbbell className="h-8 w-8 text-muted-foreground/50" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="font-semibold">Seu plano de treino ainda não chegou</p>
+                      <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+                        Assim que seu treinador publicar seu programa, ele vai aparecer aqui. Enquanto isso, você já pode explorar seu histórico.
+                      </p>
+                    </div>
+                    <Button variant="outline" size="sm" className="gap-2" onClick={() => navigate("/aluno/historico")}>
+                      <History className="h-4 w-4" /> Ver meu histórico
+                    </Button>
                   </CardContent></Card>
                 ) : (
                   <div className="space-y-3">
@@ -345,6 +511,21 @@ const StudentDashboard = () => {
                   </div>
                 </AccordionContent>
               </AccordionItem>
+
+              <AccordionItem value="achievements" className="border-none">
+                <AccordionTrigger className="bg-card px-4 py-3 rounded-lg border border-border/60 hover:bg-muted/50 data-[state=open]:rounded-b-none transition-all">
+                  <div className="flex items-center gap-2">
+                    <Medal className="h-4 w-4 text-amber-500" />
+                    <span className="font-semibold text-sm">Conquistas</span>
+                    <span className="text-xs text-muted-foreground">
+                      ({achievements.filter(a => a.unlocked).length}/{achievements.length})
+                    </span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="pt-3">
+                  <AchievementsGrid achievements={achievements} />
+                </AccordionContent>
+              </AccordionItem>
             </Accordion>
           </>
         )}
@@ -366,7 +547,10 @@ const StudentDashboard = () => {
                         <Calendar className="h-4 w-4 mx-auto text-primary mb-1" />
                       )}
                       <p className={`font-medium ${done ? "text-green-700 dark:text-green-400" : ""}`}>Semana {week}</p>
-                      <p className="text-xs text-muted-foreground">{currentBlock.sessions.length} sessões</p>
+                      <p className="text-xs text-muted-foreground">
+                        {currentBlock.sessions.length} sessão{currentBlock.sessions.length !== 1 ? "s" : ""}
+                        {done && <span className="text-green-600 dark:text-green-400 font-medium"> · concluída</span>}
+                      </p>
                     </CardContent>
                   </Card>
                 );
@@ -406,12 +590,25 @@ const StudentDashboard = () => {
               <RmEvolutionChart records={rmRecords} loading={rmLoading} onDeleteRecord={deleteRmRecord} />
             </AccordionContent>
           </AccordionItem>
+
+          <AccordionItem value="volume-rpe" className="border-none">
+            <AccordionTrigger className="bg-card px-4 py-3 rounded-lg border border-border/60 hover:bg-muted/50 data-[state=open]:rounded-b-none transition-all">
+              <div className="flex items-center gap-2">
+                <BarChart3 className="h-4 w-4 text-primary" />
+                <span className="font-semibold text-sm">RPE por semana</span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="pt-3">
+              <RpeTrendChart logs={logs} />
+            </AccordionContent>
+          </AccordionItem>
         </Accordion>
         {student.joinedAt && (Date.now() - new Date(student.joinedAt).getTime()) < 60 * 24 * 60 * 60 * 1000 && (
           <RpeReferenceTable />
         )}
         <WarmupCalculator />
       </main>
+      <StudentBottomNav />
     </div>
   );
 };
@@ -691,11 +888,26 @@ function SessionsView({ student, block, week, logs, notes, onUpsertLog, onAddNot
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold">{block.name} — Semana {week}</h2>
-      {sessions.map(session => (
+      <h2 className="text-lg font-semibold">{block.name} — Semana {week}{block.duration ? ` de ${block.duration}` : ""}</h2>
+      {sessions.map(session => {
+        const totalExercises = session.exercises.length;
+        const doneExercises = session.exercises.filter(ex => getLog(session.id, ex.id)?.completed).length;
+        const allDone = totalExercises > 0 && doneExercises === totalExercises;
+        return (
         <Card key={session.id}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">{session.name}</CardTitle>
+            <CardTitle className="text-base flex items-center justify-between gap-2">
+              <span className="truncate">{session.name}</span>
+              {allDone ? (
+                <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-green-500/10 border border-green-500/30 px-2 py-0.5 text-[10px] font-medium text-green-700 dark:text-green-400">
+                  <CheckCircle2 className="h-3 w-3" /> Registrada
+                </span>
+              ) : doneExercises > 0 ? (
+                <span className="shrink-0 text-[10px] font-medium text-muted-foreground">
+                  {doneExercises}/{totalExercises} registrados
+                </span>
+              ) : null}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 sm:space-y-3">
             {session.exercises.length === 0 ? (
@@ -704,6 +916,10 @@ function SessionsView({ student, block, week, logs, notes, onUpsertLog, onAddNot
               session.exercises.map(ex => {
                 const log = getLog(session.id, ex.id);
                 const key = `${session.id}-${ex.id}`;
+                const previousLogs = logs
+                  .filter(l => l.exerciseId === ex.id && !(l.blockId === block.id && l.weekNumber === week) && l.completed)
+                  .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+                const lastLog = previousLogs[0];
                 return (
                   <div key={ex.id} className={`p-3 rounded-lg border transition-colors ${log?.completed ? "bg-primary/5 border-primary/20" : "bg-muted/30 border-border"}`}>
                     <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
@@ -729,6 +945,23 @@ function SessionsView({ student, block, week, logs, notes, onUpsertLog, onAddNot
                         {ex.percentage && ` ${ex.percentage}`}
                       </span>
                     </div>
+                    {lastLog && (
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-2 text-[11px] text-muted-foreground">
+                        <span>
+                          Última vez:{" "}
+                          <strong className="font-semibold">{formatKg(lastLog.weight)}</strong>
+                          {(lastLog.setsData?.length ?? 0) > 0 && <> × {lastLog.setsData!.length} séries</>}
+                          {lastLog.actualRpe != null && <> @RPE {lastLog.actualRpe}</>}
+                        </span>
+                        <span>· {format(new Date(lastLog.createdAt), "dd/MM")}</span>
+                        {log?.weight != null && log.weight !== lastLog.weight && (
+                          <span className={log.weight > lastLog.weight ? "text-green-600 dark:text-green-400 font-semibold" : "text-amber-600 dark:text-amber-400 font-semibold"}>
+                            {log.weight > lastLog.weight ? <ArrowUp className="h-3 w-3 inline" /> : <ArrowDown className="h-3 w-3 inline" />}
+                            {formatKg(Math.abs(log.weight - lastLog.weight))}
+                          </span>
+                        )}
+                      </div>
+                    )}
                     <div className="space-y-2">
                       <div className="space-y-2">
                         {Array.from({ length: Number(ex.sets) || 1 }).map((_, i) => {
@@ -898,7 +1131,8 @@ function SessionsView({ student, block, week, logs, notes, onUpsertLog, onAddNot
             </div>
           </CardContent>
         </Card>
-      ))}
+      );
+      })}
       <Button
         className={`w-full mt-4 gap-2 ${isWeekCompleted ? "bg-green-600 hover:bg-green-700 text-white" : ""}`}
         variant={isWeekCompleted ? "default" : "outline"}

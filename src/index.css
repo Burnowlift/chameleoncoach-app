@@ -164,6 +164,20 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* UX mobile: safe areas (notch/barra inferior), sem bounce estranho e sem
+     o flash azul do toque no Safari/Android. */
+  body {
+    overscroll-behavior-y: none;
+    -webkit-tap-highlight-color: transparent;
+    padding-top: env(safe-area-inset-top);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  /* Barras fixas inferiores (bottom nav) respeitam o safe area do iOS */
+  .pb-safe { padding-bottom: calc(env(safe-area-inset-bottom)); }
+  .pt-safe { padding-top: calc(env(safe-area-inset-top)); }
 }
 
 @layer utilities {

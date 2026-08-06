@@ -1,5 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { readCachedJson, writeCachedJson } from "@/lib/offline-cache";
+import { enqueueAction } from "@/lib/offline-queue";
+import { syncUpsertExerciseLog, type UpsertLogPayload } from "@/lib/supabase-sync";
 
 export interface ExerciseSetLog {
   setIndex: number;
@@ -30,6 +33,23 @@ const isSameExerciseLog = (a: Pick<ExerciseLog, "studentId" | "blockId" | "weekN
   a.sessionId === b.sessionId &&
   a.exerciseId === b.exerciseId;
 
+const cacheKey = (studentId: string) => `exercise_logs:${studentId}`;
+
+const mapRow = (r: any): ExerciseLog => ({
+  id: r.id,
+  studentId: r.student_id,
+  blockId: r.block_id,
+  weekNumber: r.week_number,
+  sessionId: r.session_id,
+  exerciseId: r.exercise_id,
+  weight: Number(r.weight),
+  notes: r.notes,
+  completed: r.completed,
+  actualRpe: r.actual_rpe !== null && r.actual_rpe !== undefined ? Number(r.actual_rpe) : null,
+  setsData: Array.isArray(r.sets_data) ? r.sets_data : [],
+  createdAt: r.created_at,
+});
+
 export function useExerciseLogs(studentId: string | undefined, blockId?: string) {
   const [logs, setLogs] = useState<ExerciseLog[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,22 +62,14 @@ export function useExerciseLogs(studentId: string | undefined, blockId?: string)
       .eq("student_id", studentId);
     if (blockId) query = query.eq("block_id", blockId);
 
-    const { data } = await query.order("created_at", { ascending: true });
-    if (data) {
-      setLogs(data.map((r: any) => ({
-        id: r.id,
-        studentId: r.student_id,
-        blockId: r.block_id,
-        weekNumber: r.week_number,
-        sessionId: r.session_id,
-        exerciseId: r.exercise_id,
-        weight: Number(r.weight),
-        notes: r.notes,
-        completed: r.completed,
-        actualRpe: r.actual_rpe !== null && r.actual_rpe !== undefined ? Number(r.actual_rpe) : null,
-        setsData: Array.isArray(r.sets_data) ? r.sets_data : [],
-        createdAt: r.created_at,
-      })));
+    const { data, error } = await query.order("created_at", { ascending: true });
+    if (!error && data) {
+      const mapped = data.map(mapRow);
+      setLogs(mapped);
+      if (!blockId) writeCachedJson(cacheKey(studentId), mapped);
+    } else if (error && !blockId) {
+      const cached = readCachedJson<ExerciseLog[]>(cacheKey(studentId));
+      if (cached) setLogs(cached);
     }
     setLoading(false);
   }, [studentId, blockId]);
@@ -65,6 +77,33 @@ export function useExerciseLogs(studentId: string | undefined, blockId?: string)
   useEffect(() => { fetchLogs(); }, [fetchLogs]);
 
   const upsertLog = async (log: Omit<ExerciseLog, "id" | "createdAt">) => {
+    if (!navigator.onLine) {
+      await enqueueAction({
+        type: "upsert-log",
+        payload: {
+          studentId: log.studentId,
+          blockId: log.blockId,
+          weekNumber: log.weekNumber,
+          sessionId: log.sessionId,
+          exerciseId: log.exerciseId,
+          weight: log.weight,
+          notes: log.notes,
+          completed: log.completed,
+          actualRpe: log.actualRpe,
+          setsData: log.setsData || [],
+        } satisfies UpsertLogPayload,
+        createdAt: new Date().toISOString(),
+      });
+      setLogs(prev => {
+        const next = prev.some(l => isSameExerciseLog(l, log))
+          ? prev.map(l => isSameExerciseLog(l, log) ? { ...l, ...log } : l)
+          : [...prev, { ...log, id: `local-${Date.now()}`, createdAt: new Date().toISOString() }];
+        if (studentId) writeCachedJson(cacheKey(studentId), next);
+        return next;
+      });
+      return;
+    }
+
     const existing = logs.find(l => isSameExerciseLog(l, log));
     if (existing) {
       const { error } = await supabase.from("exercise_logs")
@@ -81,37 +120,33 @@ export function useExerciseLogs(studentId: string | undefined, blockId?: string)
         .eq("session_id", log.sessionId)
         .eq("exercise_id", log.exerciseId);
       if (error) throw error;
-      setLogs(prev => prev.map(l => isSameExerciseLog(l, log) ? { ...l, ...log } : l));
+      setLogs(prev => {
+        const next = prev.map(l => isSameExerciseLog(l, log) ? { ...l, ...log } : l);
+        if (studentId) writeCachedJson(cacheKey(studentId), next);
+        return next;
+      });
     } else {
-      const { data, error } = await supabase.from("exercise_logs").insert({
-        student_id: log.studentId,
-        block_id: log.blockId,
-        week_number: log.weekNumber,
-        session_id: log.sessionId,
-        exercise_id: log.exerciseId,
+      const result = await syncUpsertExerciseLog({
+        studentId: log.studentId,
+        blockId: log.blockId,
+        weekNumber: log.weekNumber,
+        sessionId: log.sessionId,
+        exerciseId: log.exerciseId,
         weight: log.weight,
         notes: log.notes,
         completed: log.completed,
-        actual_rpe: log.actualRpe,
-        sets_data: log.setsData as any,
-      }).select().single();
+        actualRpe: log.actualRpe,
+        setsData: log.setsData || [],
+      } satisfies UpsertLogPayload);
+      const { error } = result;
       if (error) throw error;
-      if (data) {
-        const row: any = data;
-        setLogs(prev => [...prev, {
-          id: row.id,
-          studentId: row.student_id,
-          blockId: row.block_id,
-          weekNumber: row.week_number,
-          sessionId: row.session_id,
-          exerciseId: row.exercise_id,
-          weight: Number(row.weight),
-          notes: row.notes,
-          completed: row.completed,
-          actualRpe: row.actual_rpe !== null && row.actual_rpe !== undefined ? Number(row.actual_rpe) : null,
-          setsData: Array.isArray(row.sets_data) ? row.sets_data : [],
-          createdAt: row.created_at,
-        }]);
+      if (result.data) {
+        const row: any = result.data;
+        setLogs(prev => {
+          const next = [...prev, mapRow(row)];
+          if (studentId) writeCachedJson(cacheKey(studentId), next);
+          return next;
+        });
       }
     }
   };

@@ -156,7 +156,7 @@ const StudentCheckin = () => {
             <Button variant="ghost" size="sm" onClick={() => navigate("/aluno")} className="gap-1">
               <ArrowLeft className="h-4 w-4" /> Voltar
             </Button>
-            <h1 className="text-lg font-semibold">Check-in Semanal</h1>
+            <h1 className="text-lg font-semibold min-w-0 truncate">Check-in Semanal</h1>
             <div className="w-16" />
           </div>
         </header>
