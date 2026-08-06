@@ -41,6 +41,7 @@ const MobilityTemplateEditor = lazy(() => import("./pages/MobilityTemplateEditor
 const Ranking = lazy(() => import("./pages/Ranking.tsx"));
 const StudentDashboard = lazy(() => import("./pages/StudentDashboard.tsx"));
 const StudentHistory = lazy(() => import("./pages/StudentHistory.tsx"));
+const StudentCompare = lazy(() => import("./pages/StudentCompare.tsx"));
 const StudentAnamnese = lazy(() => import("./pages/StudentAnamnese.tsx"));
 const StudentCheckin = lazy(() => import("./pages/StudentCheckin.tsx"));
 const StudentCheckinHistory = lazy(() => import("./pages/StudentCheckinHistory.tsx"));
@@ -99,6 +100,7 @@ const App = () => {
             <Route path="/aluno/checkin" element={<JaguarTheme><StudentRoute><StudentCheckin /></StudentRoute></JaguarTheme>} />
             <Route path="/aluno/checkins" element={<JaguarTheme><StudentRoute><StudentCheckinHistory /></StudentRoute></JaguarTheme>} />
             <Route path="/aluno/historico" element={<JaguarTheme><StudentRoute><StudentHistory /></StudentRoute></JaguarTheme>} />
+            <Route path="/aluno/historico/comparar" element={<JaguarTheme><StudentRoute><StudentCompare /></StudentRoute></JaguarTheme>} />
             <Route path="/aluno" element={<JaguarTheme><StudentRoute><StudentDashboard /></StudentRoute></JaguarTheme>} />
 
             {/* Password reset */}

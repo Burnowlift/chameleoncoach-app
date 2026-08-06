@@ -559,8 +559,18 @@ export function StudentMobilityContent({ studentId, onBack }: { studentId: strin
                 placeholder="Buscar template..."
                 value={templateSearch}
                 onChange={(e) => setTemplateSearch(e.target.value)}
-                className="pl-8"
+                className="pl-8 pr-8"
               />
+              {templateSearch && (
+                <button
+                  type="button"
+                  onClick={() => setTemplateSearch("")}
+                  aria-label="Limpar busca"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
             <div className="flex-1 overflow-y-auto space-y-2 -mx-1 px-1">
               {loadingTemplates ? (

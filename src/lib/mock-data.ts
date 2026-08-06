@@ -7,6 +7,7 @@ export interface Student {
   avatar?: string;
   plan: string;
   planValue: number;
+  planDuration?: string;
   status: "active" | "inactive" | "expiring";
   joinedAt: string;
   paymentDueDate: string;

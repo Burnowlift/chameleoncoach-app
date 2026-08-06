@@ -9,8 +9,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Check, Plus, Trash2 } from "lucide-react";
+import { Check, Plus, Trash2, CreditCard } from "lucide-react";
 import { mockPlans, type Plan } from "@/lib/mock-data";
+import { useStudents } from "@/hooks/useStudents";
 import { toast } from "sonner";
 
 const durationOptions = [
@@ -29,6 +30,14 @@ const Plans = () => {
       return saved ? JSON.parse(saved) : mockPlans;
     } catch { return mockPlans; }
   });
+  const { students } = useStudents();
+
+  // Contagem real de alunos por plano (nome + duração), mesmo quando o número
+  // gravado no plano está desatualizado.
+  const liveCount = (plan: Plan) =>
+    students.filter(
+      (s) => s.plan === plan.name && (plan.duration ? s.planDuration === plan.duration : true),
+    ).length;
 
   const setPlans = (updater: Plan[] | ((prev: Plan[]) => Plan[])) => {
     setPlansState((prev) => {
@@ -90,12 +99,33 @@ const Plans = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {plans.length === 0 && (
+            <Card className="border-dashed md:col-span-2 lg:col-span-3">
+              <CardContent className="py-12 text-center space-y-3">
+                <CreditCard className="h-12 w-12 text-muted-foreground/40 mx-auto" />
+                <div>
+                  <p className="font-medium">Nenhum plano cadastrado</p>
+                  <p className="text-sm text-muted-foreground">
+                    Crie planos como "Jaguar · Semestral" para vincular alunos e acompanhar vencimentos.
+                  </p>
+                </div>
+                <Button className="gap-2" onClick={() => setOpen(true)}>
+                  <Plus className="h-4 w-4" /> Novo Plano
+                </Button>
+              </CardContent>
+            </Card>
+          )}
           {plans.map((plan) => (
             <Card key={plan.id} className="hover:border-primary/30 transition-colors">
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">{plan.name}</CardTitle>
-                  <Badge variant="secondary">{plan.studentCount} alunos</Badge>
+                  <CardTitle className="text-lg">
+                    {plan.name}
+                    {plan.duration && (
+                      <span className="text-sm font-normal text-muted-foreground"> · {plan.duration}</span>
+                    )}
+                  </CardTitle>
+                  <Badge variant="secondary">{liveCount(plan)} aluno{liveCount(plan) !== 1 ? "s" : ""}</Badge>
                 </div>
                 <p className="text-sm font-medium text-muted-foreground">
                   Duração: <span className="text-foreground">{plan.duration || "Mensal"}</span>

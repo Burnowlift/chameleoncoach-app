@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Loader2, History, Search, Dumbbell, TrendingUp, AlertCircle, ArrowLeft, ArrowUp, ArrowDown, CalendarCheck, Weight } from "lucide-react";
+import { Loader2, History, Search, Dumbbell, TrendingUp, AlertCircle, ArrowLeft, ArrowUp, ArrowDown, CalendarCheck, Weight, X, CalendarRange, GitCompare } from "lucide-react";
 import type { Student, WorkoutSession } from "@/lib/mock-data";
 import { formatKg } from "@/lib/utils";
 import { readCachedJson, writeCachedJson } from "@/lib/offline-cache";
@@ -73,6 +73,8 @@ const StudentHistory = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [period, setPeriod] = useState<number | null>(null);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   const refreshStudent = useCallback(async () => {
     if (!user) return;
@@ -163,7 +165,13 @@ const StudentHistory = () => {
 
   const filteredGroups = useMemo(() => {
     let byPeriod = groups;
-    if (period != null) {
+    if (dateFrom || dateTo) {
+      const from = dateFrom ? new Date(`${dateFrom}T00:00:00`) : null;
+      const to = dateTo ? new Date(`${dateTo}T23:59:59`) : null;
+      byPeriod = groups.filter(g =>
+        (!from || g.date >= from) && (!to || g.date <= to)
+      );
+    } else if (period != null) {
       const cutoff = new Date();
       cutoff.setDate(cutoff.getDate() - period);
       byPeriod = groups.filter(g => g.date >= cutoff);
@@ -173,11 +181,18 @@ const StudentHistory = () => {
     return byPeriod
       .map(g => ({ ...g, logs: g.logs.filter(l => exerciseName(l.exerciseId).toLowerCase().includes(q)) }))
       .filter(g => g.logs.length > 0);
-  }, [groups, search, period, nameMaps]);
+  }, [groups, search, period, dateFrom, dateTo, nameMaps]);
 
   const stats = useMemo(() => {
     let periodLogs = logs;
-    if (period != null) {
+    if (dateFrom || dateTo) {
+      const from = dateFrom ? new Date(`${dateFrom}T00:00:00`) : null;
+      const to = dateTo ? new Date(`${dateTo}T23:59:59`) : null;
+      periodLogs = logs.filter(l => {
+        const d = new Date(l.createdAt);
+        return (!from || d >= from) && (!to || d <= to);
+      });
+    } else if (period != null) {
       const cutoff = new Date();
       cutoff.setDate(cutoff.getDate() - period);
       periodLogs = logs.filter(l => new Date(l.createdAt) >= cutoff);
@@ -194,7 +209,7 @@ const StudentHistory = () => {
       completedExercises: completed.length,
       totalVolume,
     };
-  }, [logs, period]);
+  }, [logs, period, dateFrom, dateTo]);
 
   const groupStats = (g: DayGroup) => {
     const sets = g.logs.flatMap(l => l.setsData || []);
@@ -284,10 +299,20 @@ const StudentHistory = () => {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar exercício (ex.: supino, agachamento)..."
-            className="pl-9 h-11 text-base sm:text-sm"
+            className="pl-9 pr-9 h-11 text-base sm:text-sm"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch("")}
+              aria-label="Limpar busca"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
 
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
@@ -300,9 +325,9 @@ const StudentHistory = () => {
           ].map(opt => (
             <button
               key={opt.label}
-              onClick={() => setPeriod(opt.days)}
+              onClick={() => { setPeriod(opt.days); setDateFrom(""); setDateTo(""); }}
               className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                period === opt.days
+                period === opt.days && !dateFrom && !dateTo
                   ? "bg-primary text-primary-foreground"
                   : "bg-muted text-muted-foreground hover:bg-muted/70"
               }`}
@@ -310,6 +335,66 @@ const StudentHistory = () => {
               {opt.label}
             </button>
           ))}
+        </div>
+
+        <div className={`flex items-end gap-2 ${dateFrom || dateTo ? "" : "hidden"}`}>
+          <label className="flex-1 text-xs text-muted-foreground">
+            De
+            <input
+              type="date"
+              value={dateFrom}
+              max={dateTo || undefined}
+              onChange={e => { setDateFrom(e.target.value); setPeriod(null); }}
+              className="mt-1 w-full h-9 rounded-md border border-border bg-background px-2 text-sm text-foreground"
+            />
+          </label>
+          <label className="flex-1 text-xs text-muted-foreground">
+            Até
+            <input
+              type="date"
+              value={dateTo}
+              min={dateFrom || undefined}
+              onChange={e => { setDateTo(e.target.value); setPeriod(null); }}
+              className="mt-1 w-full h-9 rounded-md border border-border bg-background px-2 text-sm text-foreground"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={() => { setDateFrom(""); setDateTo(""); }}
+            aria-label="Limpar intervalo de datas"
+            className="shrink-0 h-9 px-3 rounded-md border border-border text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Limpar
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => { setDateFrom(""); setDateTo(""); setPeriod(null); }}
+            className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+              dateFrom || dateTo
+                ? "border-primary/40 bg-primary/10 text-primary hover:bg-primary/15"
+                : "border-border text-muted-foreground hover:bg-muted/70"
+            }`}
+          >
+            <CalendarRange className="h-3.5 w-3.5 inline mr-1 -mt-0.5" />
+            Intervalo de datas
+          </button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 gap-1.5 text-xs shrink-0"
+            onClick={() => navigate("/aluno/historico/comparar")}
+          >
+            <GitCompare className="h-3.5 w-3.5" />
+            Comparar treinos
+          </Button>
+          {!logsLoading && (
+            <p className="text-xs text-muted-foreground ml-auto">
+              Mostrando {filteredGroups.length} {filteredGroups.length === 1 ? "treino" : "treinos"}
+            </p>
+          )}
         </div>
 
         {logsLoading ? (
@@ -320,7 +405,11 @@ const StudentHistory = () => {
             <p className="text-muted-foreground mt-3">
               {logs.length === 0
                 ? "Nenhum treino registrado ainda. Registre suas cargas no seu treino para ver o histórico aqui."
-                : "Nenhum resultado para a busca."}
+                : dateFrom || dateTo
+                  ? "Nenhum treino no período selecionado. Ajuste o intervalo de datas."
+                  : search
+                    ? "Nenhum resultado para a busca."
+                    : "Nenhum treino no período selecionado."}
             </p>
           </CardContent></Card>
         ) : (

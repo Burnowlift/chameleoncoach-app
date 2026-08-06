@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Search, Plus, Pencil, Trash2, Dumbbell, CalendarIcon, KeyRound, TrendingUp, Activity, CheckCircle2, AlertTriangle, ChevronDown, X, Eye, EyeOff, Link } from "lucide-react";
+import { Search, Plus, Pencil, Trash2, Dumbbell, CalendarIcon, KeyRound, TrendingUp, Activity, CheckCircle2, AlertTriangle, ChevronDown, X, Eye, EyeOff, Link, CreditCard } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn, sbdTotal, formatKg } from "@/lib/utils";
 import { mockPlans, type Plan, type Student } from "@/lib/mock-data";
@@ -183,6 +183,83 @@ function validateCPF(value: string): string | null {
   return null;
 }
 
+const FILTERS_STORAGE_KEY = "students-view-filters-v1";
+const SEARCH_STORAGE_KEY = "students-view-search-v1";
+
+const defaultFilters = {
+  status: "all" as const,
+  plans: [] as string[],
+  noResponseFilter: false,
+  noResponseDays: 7,
+  trainingEndingFilter: false,
+  trainingEndingDays: 7,
+  planEndingFilter: false,
+  planEndingDays: 14,
+};
+
+function loadSavedFilters() {
+  try {
+    const raw = localStorage.getItem(FILTERS_STORAGE_KEY);
+    if (raw) return { ...defaultFilters, ...JSON.parse(raw) };
+  } catch { /* ignore */ }
+  return defaultFilters;
+}
+
+/** Chave de plano com duração: "Jaguar · Semestral" (ou só o nome quando sem duração). */
+const planKey = (s: { plan: string; planDuration?: string }) =>
+  s.planDuration ? `${s.plan} · ${s.planDuration}` : s.plan;
+
+const DURATION_MONTHS: Record<string, number> = {
+  "Mensal": 1, "monthly": 1, "Bimestral": 2, "bimonthly": 2,
+  "Trimestral": 3, "quarterly": 3, "Quadrimestral": 4, "quadrimester": 4,
+  "Semestral": 6, "semiannual": 6, "Anual": 12, "annual": 12,
+};
+
+const EDIT_DURATION_OPTIONS = [
+  { value: "", label: "Não definida" },
+  { value: "Mensal", label: "Mensal" },
+  { value: "Bimestral", label: "Bimestral" },
+  { value: "Trimestral", label: "Trimestral" },
+  { value: "Quadrimestral", label: "Quadrimestral" },
+  { value: "Semestral", label: "Semestral" },
+  { value: "Anual", label: "Anual" },
+];
+
+/** Contagem regressiva do vencimento: "vence em X dias" / "venceu há X dias". */
+function PlanCountdown({ dueDate }: { dueDate: string }) {
+  const due = new Date(dueDate + "T00:00:00");
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const dueDay = Number.isNaN(due.getTime())
+    ? null
+    : new Date(due.getFullYear(), due.getMonth(), due.getDate());
+  if (!dueDay) return null;
+  const days = Math.round((dueDay.getTime() - today.getTime()) / 86400000);
+  const label = format(dueDay, "dd/MM/yyyy");
+  if (days < 0) {
+    return (
+      <p className="text-xs font-medium text-destructive">
+        Vencido em {label} · há {Math.abs(days)} dia{days !== -1 ? "s" : ""}
+      </p>
+    );
+  }
+  if (days === 0) {
+    return <p className="text-xs font-medium text-destructive">Vence hoje ({label})</p>;
+  }
+  if (days <= 14) {
+    return (
+      <p className="text-xs font-medium text-amber-600 dark:text-amber-400">
+        Vence em {days} dia{days !== 1 ? "s" : ""} ({label})
+      </p>
+    );
+  }
+  return (
+    <p className="text-xs font-medium text-muted-foreground">
+      Vence em {days} dias ({label})
+    </p>
+  );
+}
+
 const Students = () => {
   const navigate = useNavigate();
   const { students, loading, create, update, remove, refetch } = useStudents();
@@ -192,22 +269,24 @@ const Students = () => {
   const [rmStudentId, setRmStudentId] = useState<string | undefined>(undefined);
   const { records: rmRecords, loading: rmLoading, deleteRecord: deleteRmRecord, refetch: refetchRm } = useRmHistory(rmStudentId);
   useRmBackfill(rmStudentId, refetchRm);
-  const [search, setSearch] = useState("");
-  const [filters, setFilters] = useState<{
-    status: "all" | "active" | "inactive";
-    plans: string[];
-    sortByLastResponse: boolean;
-    trainingEndingFilter: boolean;
-    trainingEndingDays: number;
-  }>({
-    status: "all",
-    plans: [],
-    sortByLastResponse: false,
-    trainingEndingFilter: false,
-    trainingEndingDays: 7,
-  });
+  const [search, setSearch] = useState(() => localStorage.getItem(SEARCH_STORAGE_KEY) ?? "");
+  const [filters, setFilters] = useState(loadSavedFilters);
+
+  // Persiste filtros e busca: voltar de um aluno não reseta a visão
+  useEffect(() => {
+    localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(filters));
+  }, [filters]);
+  useEffect(() => {
+    localStorage.setItem(SEARCH_STORAGE_KEY, search);
+  }, [search]);
+
+  const clearFilters = () => {
+    setFilters(defaultFilters);
+    setSearch("");
+  };
   const [open, setOpen] = useState(false);
   const [editStudent, setEditStudent] = useState<Student | null>(null);
+  const [editPlanDuration, setEditPlanDuration] = useState("");
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [workoutStudent, setWorkoutStudent] = useState<Student | null>(null);
   const [newName, setNewName] = useState("");
@@ -251,37 +330,83 @@ const Students = () => {
     return out;
   })();
 
+  // Dias até o vencimento do plano (payment_due_date): negativo = já venceu
+  const daysUntilPlanEndByStudent: Record<string, number> = (() => {
+    const out: Record<string, number> = {};
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    for (const s of students) {
+      if (!s.paymentDueDate) continue;
+      const due = new Date(s.paymentDueDate + "T00:00:00");
+      if (Number.isNaN(due.getTime())) continue;
+      const dueDay = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+      out[s.id] = Math.round((dueDay.getTime() - today.getTime()) / 86400000);
+    }
+    return out;
+  })();
+
   const filtered = students
     .filter((s) => {
       const matchSearch = s.name.toLowerCase().includes(search.toLowerCase());
       const matchStatus = filters.status === "all" || s.status === filters.status;
-      const matchPlan = filters.plans.length === 0 || filters.plans.includes(s.plan);
+      const matchPlan = filters.plans.length === 0 || filters.plans.includes(planKey(s));
       if (filters.trainingEndingFilter) {
         const info = blockEndMap[s.id];
         if (!info || info.daysRemaining > filters.trainingEndingDays) return false;
       }
+      if (filters.noResponseFilter) {
+        const days = daysWithoutResponseByStudent[s.id] ?? 0;
+        if (days < filters.noResponseDays) return false;
+      }
+      if (filters.planEndingFilter) {
+        const days = daysUntilPlanEndByStudent[s.id];
+        if (days === undefined || days > filters.planEndingDays) return false;
+      }
       return matchSearch && matchStatus && matchPlan;
     })
     .sort((a, b) => {
+      if (filters.planEndingFilter) {
+        const da = daysUntilPlanEndByStudent[a.id] ?? Number.POSITIVE_INFINITY;
+        const db = daysUntilPlanEndByStudent[b.id] ?? Number.POSITIVE_INFINITY;
+        if (da !== db) return da - db;
+      }
       if (filters.trainingEndingFilter) {
         const da = blockEndMap[a.id]?.daysRemaining ?? Number.POSITIVE_INFINITY;
         const db = blockEndMap[b.id]?.daysRemaining ?? Number.POSITIVE_INFINITY;
         if (da !== db) return da - db;
       }
-      if (filters.sortByLastResponse && !filters.trainingEndingFilter) {
-        const ta = feedback.lastResponseByStudent[a.id] ?? 0;
-        const tb = feedback.lastResponseByStudent[b.id] ?? 0;
-        return ta - tb;
+      if (filters.noResponseFilter) {
+        const ta = daysWithoutResponseByStudent[a.id] ?? 0;
+        const tb = daysWithoutResponseByStudent[b.id] ?? 0;
+        return tb - ta;
       }
       return 0;
     });
 
-  const plans = [...new Set(students.map((s) => s.plan))].filter(Boolean);
+  const plans = [...new Set(students.map(planKey))].filter(Boolean);
   const allPlans: Plan[] = (() => {
     try {
       const saved = localStorage.getItem("plans-data");
       return saved ? (JSON.parse(saved) as Plan[]) : mockPlans;
     } catch { return mockPlans; }
+  })();
+
+  // Opções do select de plano na edição: inclui o plano atual do aluno mesmo se
+  // ele não estiver mais na lista de planos (ex.: plano renomeado).
+  const editPlanOptions = (() => {
+    const opts = allPlans.map((p) => ({
+      value: `${p.name}|${p.duration ?? ""}`,
+      label: p.duration ? `${p.name} · ${p.duration}` : p.name,
+    }));
+    if (!editStudent) return opts;
+    const current = `${editStudent.plan}|${editPlanDuration}`;
+    if (!opts.some((o) => o.value === current)) {
+      opts.unshift({
+        value: current,
+        label: editPlanDuration ? `${editStudent.plan} · ${editPlanDuration}` : editStudent.plan,
+      });
+    }
+    return opts;
   })();
 
   const togglePlanFilter = (plan: string) => {
@@ -315,15 +440,11 @@ const Students = () => {
       return;
     }
 
-    const selectedPlan = allPlans.find((p) => p.name === newPlan);
-    const durationMonthsMap: Record<string, number> = {
-      "Mensal": 1, "monthly": 1, "Bimestral": 2, "bimonthly": 2,
-      "Trimestral": 3, "quarterly": 3, "Quadrimestral": 4, "quadrimester": 4,
-      "Semestral": 6, "semiannual": 6, "Anual": 12, "annual": 12,
-    };
+    const selectedPlan = allPlans.find((p) => `${p.name}|${p.duration ?? ""}` === newPlan);
     const planDuration = selectedPlan?.duration || "Mensal";
-    const months = durationMonthsMap[planDuration] || 1;
+    const months = DURATION_MONTHS[planDuration] || 1;
     const renewalDate = addMonths(newStartDate, months);
+    const planName = newPlan.split("|")[0];
 
     const passwordToSet = newLoginPassword.trim();
     if (!passwordToSet) {
@@ -359,7 +480,8 @@ const Students = () => {
       const newId = await create({
         name: newName.trim().slice(0, 100),
         email: newEmail.trim().slice(0, 255),
-        plan: newPlan,
+        plan: planName,
+        planDuration: selectedPlan?.duration || null,
         planValue: 0,
         cpf: newCpf.trim().replace(/\D/g, ""),
         phone: newPhone.trim().slice(0, 20),
@@ -643,7 +765,22 @@ const Students = () => {
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Buscar aluno..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+              <Input
+                placeholder="Buscar aluno..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9 pr-8"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  aria-label="Limpar busca"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
             <Select
               value={filters.status}
@@ -704,6 +841,7 @@ const Students = () => {
                   )}
                   {plans.map((p) => {
                     const checked = filters.plans.includes(p);
+                    const count = students.filter((s) => planKey(s) === p).length;
                     return (
                       <label
                         key={p}
@@ -711,6 +849,9 @@ const Students = () => {
                       >
                         <Checkbox checked={checked} onCheckedChange={() => togglePlanFilter(p)} />
                         <span className="text-sm flex-1 truncate">{p}</span>
+                        <span className="text-[10px] text-muted-foreground/60 tabular-nums">
+                          {count}
+                        </span>
                       </label>
                     );
                   })}
@@ -720,22 +861,46 @@ const Students = () => {
           </div>
 
           {/* Toggles inteligentes */}
-          <div className="flex flex-col sm:flex-row gap-2">
+          {(search || filters.status !== "all" || filters.plans.length > 0 || filters.noResponseFilter || filters.trainingEndingFilter || filters.planEndingFilter) && (
+            <div className="flex items-center justify-end">
+              <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground gap-1" onClick={clearFilters}>
+                <X className="h-3 w-3" /> Limpar filtros
+              </Button>
+            </div>
+          )}
+          <div className="flex flex-col lg:flex-row gap-2">
             <Card className="flex-1">
               <CardContent className="p-3 flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <Label htmlFor="toggle-no-response" className="text-xs font-medium cursor-pointer">
-                    Priorizar sem resposta
+                    Sem resposta há mais de
                   </Label>
                   <p className="text-[10px] text-muted-foreground leading-tight">
-                    Ordena por quem está há mais tempo sem retorno.
+                    Mostra apenas alunos sem retorno há {filters.noResponseDays}+ dias, do mais antigo para o mais recente.
                   </p>
                 </div>
-                <Switch
-                  id="toggle-no-response"
-                  checked={filters.sortByLastResponse}
-                  onCheckedChange={(v) => setFilters((f) => ({ ...f, sortByLastResponse: v }))}
-                />
+                <div className="flex items-center gap-2 shrink-0">
+                  <Select
+                    value={String(filters.noResponseDays)}
+                    onValueChange={(v) => setFilters((f) => ({ ...f, noResponseDays: Number(v) }))}
+                    disabled={!filters.noResponseFilter}
+                  >
+                    <SelectTrigger className="w-16 h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="3">3</SelectItem>
+                      <SelectItem value="7">7</SelectItem>
+                      <SelectItem value="14">14</SelectItem>
+                      <SelectItem value="30">30</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Switch
+                    id="toggle-no-response"
+                    checked={filters.noResponseFilter}
+                    onCheckedChange={(v) => setFilters((f) => ({ ...f, noResponseFilter: v }))}
+                  />
+                </div>
               </CardContent>
             </Card>
             <Card className="flex-1">
@@ -745,7 +910,7 @@ const Students = () => {
                     Final do treino próximo
                   </Label>
                   <p className="text-[10px] text-muted-foreground leading-tight">
-                    Mostra apenas alunos com até {filters.trainingEndingDays} dias restantes ou treino expirado.
+                    Mostra apenas alunos com até {filters.trainingEndingDays} dias restantes de treino ou já expirados.
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -771,6 +936,40 @@ const Students = () => {
                 </div>
               </CardContent>
             </Card>
+            <Card className="flex-1">
+              <CardContent className="p-3 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <Label htmlFor="toggle-plan-ending" className="text-xs font-medium cursor-pointer">
+                    Plano vencendo em até
+                  </Label>
+                  <p className="text-[10px] text-muted-foreground leading-tight">
+                    Mostra apenas alunos cujo plano vence em até {filters.planEndingDays} dias ou já venceu.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Select
+                    value={String(filters.planEndingDays)}
+                    onValueChange={(v) => setFilters((f) => ({ ...f, planEndingDays: Number(v) }))}
+                    disabled={!filters.planEndingFilter}
+                  >
+                    <SelectTrigger className="w-16 h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="7">7</SelectItem>
+                      <SelectItem value="14">14</SelectItem>
+                      <SelectItem value="30">30</SelectItem>
+                      <SelectItem value="60">60</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Switch
+                    id="toggle-plan-ending"
+                    checked={filters.planEndingFilter}
+                    onCheckedChange={(v) => setFilters((f) => ({ ...f, planEndingFilter: v }))}
+                  />
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
 
@@ -778,7 +977,7 @@ const Students = () => {
           students={students}
           marks={feedback.marks}
           includeOrange={isAdmin}
-          selectedPlans={filters.plans}
+          selectedPlans={[...new Set(filters.plans.map((p) => p.split(" · ")[0]))]}
         />
 
 
@@ -786,6 +985,11 @@ const Students = () => {
           <p className="text-center text-muted-foreground py-8">Carregando...</p>
         ) : (
           <div className="space-y-3">
+            {filtered.length > 0 && (
+              <p className="text-[11px] text-muted-foreground/70 text-right">
+                Mostrando {filtered.length} de {students.length} aluno{students.length !== 1 ? "s" : ""}
+              </p>
+            )}
             {filtered.map((student) => {
               const st = statusMap[student.status];
               const total = sbdTotal(student.squat1RM, student.bench1RM, student.deadlift1RM);
@@ -821,6 +1025,7 @@ const Students = () => {
                               </Badge>
                             )}
                             <p className="font-medium text-sm leading-tight truncate">{student.name}</p>
+                            <Badge variant="secondary" className="text-[9px] px-1.5 py-0">{planKey(student)}</Badge>
                             {student.selfRegistered && (
                               <Badge variant="default" className="text-[9px] px-1.5 py-0 bg-blue-600 hover:bg-blue-700">Novo</Badge>
                             )}
@@ -855,7 +1060,7 @@ const Students = () => {
                         </div>
 
                         <div className="flex items-center gap-0.5 shrink-0">
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEditStudent({ ...student }); setRmStudentId(student.id); }}>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setEditStudent({ ...student }); setEditPlanDuration(student.planDuration ?? ""); setRmStudentId(student.id); }}>
                             <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                           </Button>
                           <Switch
@@ -1038,7 +1243,9 @@ const Students = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {allPlans.map((p) => (
-                    <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>
+                    <SelectItem key={p.id} value={`${p.name}|${p.duration ?? ""}`}>
+                      {p.duration ? `${p.name} · ${p.duration}` : p.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -1147,6 +1354,65 @@ const Students = () => {
               </div>
               <div className="border-t border-border pt-4">
                 <BodyWeightHistorySection studentId={editStudent.id} />
+              </div>
+
+              {/* Plano e vencimento */}
+              <div className="border-t border-border pt-4 space-y-3">
+                <Label className="flex items-center gap-2">
+                  <CreditCard className="h-4 w-4" />
+                  Plano e vencimento
+                </Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label>Plano</Label>
+                    <Select
+                      value={`${editStudent.plan}|${editPlanDuration}`}
+                      onValueChange={(v) => setEditStudent((s) => (s ? { ...s, plan: v.split("|")[0] } : s))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {editPlanOptions.map((o) => (
+                          <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Duração</Label>
+                    <Select
+                      value={editPlanDuration}
+                      onValueChange={(v) => {
+                        setEditPlanDuration(v);
+                        setEditStudent((s) => {
+                          if (!s) return s;
+                          const months = DURATION_MONTHS[v] ?? 0;
+                          const base = v && months > 0 ? new Date() : null;
+                          const nextDue = base
+                            ? format(addMonths(base, months), "yyyy-MM-dd")
+                            : s.paymentDueDate;
+                          return { ...s, planDuration: v || undefined, paymentDueDate: nextDue };
+                        });
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a duração" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {EDIT_DURATION_OPTIONS.map((d) => (
+                          <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                {editStudent.paymentDueDate && (
+                  <PlanCountdown dueDate={editStudent.paymentDueDate} />
+                )}
+                <p className="text-[10px] text-muted-foreground leading-tight">
+                  Ao definir/alterar a duração, o vencimento é recalculado a partir de hoje.
+                </p>
               </div>
 
               {/* Acesso do aluno (criar ou redefinir senha) */}

@@ -424,10 +424,19 @@ const StudentDashboard = () => {
                 {blocksLoading ? (
                   <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
                 ) : blocks.length === 0 ? (
-                  <Card><CardContent className="py-12 text-center">
-                    <Dumbbell className="h-10 w-10 mx-auto text-muted-foreground/30" />
-                    <p className="text-muted-foreground mt-3">Nenhum bloco de treino disponível.</p>
-                    <p className="text-sm text-muted-foreground">Aguarde seu treinador montar seu programa.</p>
+                  <Card><CardContent className="py-12 text-center space-y-4">
+                    <div className="mx-auto w-16 h-16 rounded-2xl bg-muted flex items-center justify-center">
+                      <Dumbbell className="h-8 w-8 text-muted-foreground/50" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="font-semibold">Seu plano de treino ainda não chegou</p>
+                      <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+                        Assim que seu treinador publicar seu programa, ele vai aparecer aqui. Enquanto isso, você já pode explorar seu histórico.
+                      </p>
+                    </div>
+                    <Button variant="outline" size="sm" className="gap-2" onClick={() => navigate("/aluno/historico")}>
+                      <History className="h-4 w-4" /> Ver meu histórico
+                    </Button>
                   </CardContent></Card>
                 ) : (
                   <div className="space-y-3">
@@ -542,7 +551,10 @@ const StudentDashboard = () => {
                         <Calendar className="h-4 w-4 mx-auto text-primary mb-1" />
                       )}
                       <p className={`font-medium ${done ? "text-green-700 dark:text-green-400" : ""}`}>Semana {week}</p>
-                      <p className="text-xs text-muted-foreground">{currentBlock.sessions.length} sessões</p>
+                      <p className="text-xs text-muted-foreground">
+                        {currentBlock.sessions.length} sessão{currentBlock.sessions.length !== 1 ? "s" : ""}
+                        {done && <span className="text-green-600 dark:text-green-400 font-medium"> · concluída</span>}
+                      </p>
                     </CardContent>
                   </Card>
                 );
@@ -889,11 +901,26 @@ function SessionsView({ student, block, week, logs, notes, onUpsertLog, onAddNot
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold">{block.name} — Semana {week}</h2>
-      {sessions.map(session => (
+      <h2 className="text-lg font-semibold">{block.name} — Semana {week}{block.duration ? ` de ${block.duration}` : ""}</h2>
+      {sessions.map(session => {
+        const totalExercises = session.exercises.length;
+        const doneExercises = session.exercises.filter(ex => getLog(session.id, ex.id)?.completed).length;
+        const allDone = totalExercises > 0 && doneExercises === totalExercises;
+        return (
         <Card key={session.id}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">{session.name}</CardTitle>
+            <CardTitle className="text-base flex items-center justify-between gap-2">
+              <span className="truncate">{session.name}</span>
+              {allDone ? (
+                <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-green-500/10 border border-green-500/30 px-2 py-0.5 text-[10px] font-medium text-green-700 dark:text-green-400">
+                  <CheckCircle2 className="h-3 w-3" /> Registrada
+                </span>
+              ) : doneExercises > 0 ? (
+                <span className="shrink-0 text-[10px] font-medium text-muted-foreground">
+                  {doneExercises}/{totalExercises} registrados
+                </span>
+              ) : null}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 sm:space-y-3">
             {session.exercises.length === 0 ? (
@@ -1117,7 +1144,8 @@ function SessionsView({ student, block, week, logs, notes, onUpsertLog, onAddNot
             </div>
           </CardContent>
         </Card>
-      ))}
+      );
+      })}
       <Button
         className={`w-full mt-4 gap-2 ${isWeekCompleted ? "bg-green-600 hover:bg-green-700 text-white" : ""}`}
         variant={isWeekCompleted ? "default" : "outline"}
