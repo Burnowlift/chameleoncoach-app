@@ -802,6 +802,8 @@ function SessionsView({ student, block, week, logs, notes, onUpsertLog, onAddNot
                                   }}
                                 >
                                   <option value="">RPE</option>
+                                  <option value="5">RPE 5</option>
+                                  <option value="5.5">RPE 5.5</option>
                                   <option value="6">RPE 6</option>
                                   <option value="6.5">RPE 6.5</option>
                                   <option value="7">RPE 7</option>
