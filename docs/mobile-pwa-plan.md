@@ -13,7 +13,7 @@
 | Botão "Instalar" (Chrome/Edge/Android) + instruções iOS (Adicionar à Tela de Início) | ✅ Implementado |
 | Dismiss com re-exibição após 7 dias / sessão | ✅ Implementado |
 | Build, typecheck e testes | ✅ Passando |
-| Push notifications, bottom nav, code splitting | ⚙️ Parcial — bottom nav, code splitting e **notificações in-app + Web Push codificados** (06/08); ativação depende do deploy das migrations/functions |
+| Push notifications, bottom nav, code splitting | ✅ Completo — bottom nav, code splitting, notificações in-app + Web Push **ativos** (07/08): migrations e Edge Functions deployadas |
 
 **Extras implementados (06/08):**
 - ✅ **Bottom nav do aluno** (`StudentBottomNav.tsx`): barra fixa no mobile (Início / Histórico / Check-ins) com safe area (`pb-safe`) e ativação por rota, nas páginas Dashboard, Histórico e Histórico de Check-ins

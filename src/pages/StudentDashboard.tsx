@@ -49,7 +49,7 @@ import { StudentBottomNav } from "@/components/StudentBottomNav";
 import { readCachedJson, writeCachedJson } from "@/lib/offline-cache";
 import { enqueueAction } from "@/lib/offline-queue";
 import { computeWorkoutStreak } from "@/lib/streaks";
-import { computeAchievements } from "@/lib/achievements";
+import { useAchievements } from "@/hooks/useAchievements";
 import { VolumeChart } from "@/components/VolumeChart";
 import { RpeTrendChart } from "@/components/RpeTrendChart";
 import { WeeklyGoalRing } from "@/components/WeeklyGoalRing";
@@ -122,6 +122,7 @@ const StudentDashboard = () => {
   const { notes, addNote, deleteNote } = useSessionNotes(student?.id);
   const { records: rmRecords, loading: rmLoading, addRecord: addRmRecord, deleteRecord: deleteRmRecord, refetch: refetchRm } = useRmHistory(student?.id);
   useRmBackfill(student?.id, refetchRm);
+  const { achievements } = useAchievements(logs, rmRecords);
   const [completedWeeks, setCompletedWeeks] = useState<{ blockId: string; weekNumber: number }[]>([]);
 
   // Fetch completed weeks
@@ -224,7 +225,6 @@ const StudentDashboard = () => {
 
   // Gamificação + resumo da semana
   const streak = computeWorkoutStreak(logs);
-  const achievements = computeAchievements(logs, rmRecords);
 
   const thisWeekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
   const thisWeekEnd = endOfWeek(new Date(), { weekStartsOn: 1 });

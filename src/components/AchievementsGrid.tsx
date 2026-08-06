@@ -1,6 +1,13 @@
 import { Trophy, Medal, Lock } from "lucide-react";
 import type { Achievement } from "@/lib/achievements";
 
+function formatDate(iso?: string) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
 export function AchievementsGrid({ achievements }: { achievements: Achievement[] }) {
   const unlocked = achievements.filter(a => a.unlocked);
   const locked = achievements.filter(a => !a.unlocked);
@@ -21,6 +28,9 @@ export function AchievementsGrid({ achievements }: { achievements: Achievement[]
               >
                 <Trophy className="h-6 w-6 mx-auto text-amber-500 mb-1" />
                 <p className="text-[11px] font-semibold leading-tight">{a.label}</p>
+                {formatDate(a.unlockedAt) && (
+                  <p className="text-[10px] text-amber-500/70 mt-0.5">{formatDate(a.unlockedAt)}</p>
+                )}
               </div>
             ))}
           </div>

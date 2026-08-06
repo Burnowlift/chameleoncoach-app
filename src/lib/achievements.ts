@@ -6,6 +6,7 @@ export interface Achievement {
   label: string;
   description: string;
   unlocked: boolean;
+  unlockedAt?: string;
 }
 
 /**
