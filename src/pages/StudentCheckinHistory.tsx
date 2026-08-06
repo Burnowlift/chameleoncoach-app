@@ -9,6 +9,7 @@ import { ArrowLeft, Loader2, Calendar, MessageSquare, AlertCircle, TrendingUp, T
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import AnimatedPage from "@/components/AnimatedPage";
+import { StudentBottomNav } from "@/components/StudentBottomNav";
 import { Helmet } from "react-helmet-async";
 
 const StudentCheckinHistory = () => {
@@ -54,7 +55,7 @@ const StudentCheckinHistory = () => {
           </div>
         </header>
 
-        <main className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+        <main className="max-w-3xl mx-auto px-4 py-6 space-y-6 pb-24 md:pb-6">
           {history.length === 0 ? (
             <Card className="text-center py-10">
               <CardContent>
@@ -186,6 +187,7 @@ const StudentCheckinHistory = () => {
             </div>
           )}
         </main>
+        <StudentBottomNav />
       </div>
     </AnimatedPage>
   );

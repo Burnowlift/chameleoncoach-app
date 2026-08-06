@@ -13,7 +13,15 @@
 | Botão "Instalar" (Chrome/Edge/Android) + instruções iOS (Adicionar à Tela de Início) | ✅ Implementado |
 | Dismiss com re-exibição após 7 dias / sessão | ✅ Implementado |
 | Build, typecheck e testes | ✅ Passando |
-| Push notifications, bottom nav, code splitting | ⏳ Próximas fases (abaixo) |
+| Push notifications, bottom nav, code splitting | ⚙️ Parcial — bottom nav, code splitting e **notificações in-app + Web Push codificados** (06/08); ativação depende do deploy das migrations/functions |
+
+**Extras implementados (06/08):**
+- ✅ **Bottom nav do aluno** (`StudentBottomNav.tsx`): barra fixa no mobile (Início / Histórico / Check-ins) com safe area (`pb-safe`) e ativação por rota, nas páginas Dashboard, Histórico e Histórico de Check-ins
+- ✅ **Safe areas / toque:** `env(safe-area-inset-*)` global, `overscroll-behavior-y: none`, `-webkit-tap-highlight-color: transparent`
+- ✅ **Code splitting:** rotas pesadas via `React.lazy` + `Suspense` (todas as páginas exceto entrada/auth); `manualChunks` (vendor-react, vendor-recharts, vendor-supabase) — bundle inicial caiu de **1.402 kB → 639 kB** (gzip 398 → 184 kB)
+- ✅ **Background Sync** (item P3): SW em `injectManifest` (`public/sw.ts`) com handler `sync` (tag `chameleon-sync`) que acorda clientes abertos; `enqueueAction` registra o sync tag
+- ✅ **Notificações in-app** (`NotificationBell` + `useNotifications`): sino com badge de não lidas, painel com lista e "marcar todas como lidas"; Realtime (INSERT em `notifications`) atualiza em tempo real; montado no header do treinador (`CoachLayout`) e do aluno (`StudentDashboard`)
+- ✅ **Web Push codificado:** handler `push`/`notificationclick` no SW; tabela `push_subscriptions` (migração `20260807000000_push_subscriptions.sql`); Edge Function `register-push-subscription`; toggle "Ativar push" no sino (permite negar silenciosamente se a função não estiver publicada); chaves VAPID geradas (pública em `src/config/push.ts`, privada em `scripts/.vapid-private-key` — gitignored); script de envio `scripts/send-push.js` (web-push, remove inscrições 404/410)
 
 ---
 
@@ -167,19 +175,22 @@ export default defineConfig(({ mode }) => ({
 
 > Alavanca a tabela `notifications` já existente (após correção do M-3 do [plano de segurança](security-improvements-plan.md)).
 
-- **Opção A (recomendada):** Web Push com VAPID — service worker recebe push; registrar subscription via Edge Function; enviar de um script admin/trigger.
-- **Opção B:** Supabase Realtime (já usado) para **notificações in-app** em tempo real quando o app está aberto — sem custo, sem permissão; implementar junto com a Opção A.
-- Permissão pedida no contexto certo (após 2ª interação, não no 1º load).
+- **Opção A:** Web Push com VAPID — **implementado** (06/08): SW `push`/`notificationclick` em `public/sw.ts`; tabela `push_subscriptions`; Edge Function `register-push-subscription`; toggle no sino; VAPID keys em `src/config/push.ts` + `scripts/.vapid-private-key`; envio via `scripts/send-push.js`. ⏳ **Ativação:** rodar `supabase db push` e `supabase functions deploy register-push-subscription`, depois pedir permissão (toggle no sino).
+- **Opção B:** Supabase Realtime para **notificações in-app** — **implementado** (06/08): `NotificationBell` + `useNotifications` (badge, painel, marcar lidas, atualização via `postgres_changes` em `notifications`), montado no header do treinador e do aluno.
+- Permissão pedida no contexto certo (toggle explícito no sino, nunca no 1º load).
 - Casos: resposta do treinador ao check-in, novo treino publicado, podium/campeonato, lembrete de check-in semanal.
 - No iOS/Safari, push web exige app instalado na tela inicial (a partir do iOS 16.4) — documentar.
+- **Pendente:** trigger automático de push (ex.: lembrete de check-in semanal) e integração com envio agendado.
 
 ---
 
 ## 5. Testes e validação
 
-### 5.1 — Playwright mobile
-- Configurar `devices['iPhone 13']` e `Pixel 7` em `playwright.config.ts` com projetos separados.
-- Fluxos críticos: login aluno → dashboard → check-in; upload anamnese; instalação PWA (simular via CDP no Chrome).
+### 5.1 — Playwright mobile — ✅ Implementado (06/08)
+- `playwright.config.ts` reescrito (config lovable removida — pacote nunca instalado): projetos `desktop-chromium`, `mobile-chrome` (Pixel 7) e `mobile-ios` (iPhone 13, WebKit) + `webServer` (build + preview na 4173).
+- `e2e/smoke.spec.ts`: 5 testes públicos (landing + manifest, CTA instalação mobile, login aluno, login treinador, SW registrado/ativo) — **15/15 passando** (3 projetos).
+- Script: `npm run test:e2e` (browsers: `npx playwright install chromium webkit`).
+- Fluxos com dados ainda **pendentes** (exigem credenciais): login → dashboard → check-in, upload anamnese.
 
 ### 5.2 — Checklist de qualidade
 - Lighthouse PWA (installable, offline, best practices) ≥ 90.

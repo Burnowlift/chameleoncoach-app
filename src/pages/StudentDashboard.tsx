@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Dumbbell, LogOut, User, Loader2, ArrowLeft, MessageSquare, Weight, Send, Calendar, Check, Trash2, Play, CheckCircle2, Camera, Gauge, X, Timer, Trophy, TrendingUp, Download, History, ArrowUp, ArrowDown, Flame, BarChart3, Medal } from "lucide-react";
+import { NotificationBell } from "@/components/NotificationBell";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { RmEvolutionChart } from "@/components/RmEvolutionChart";
 import { RpeReferenceTable } from "@/components/RpeReferenceTable";
@@ -44,6 +45,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { sbdTotal, formatKg } from "@/lib/utils";
 import { CheckinBanner } from "@/components/CheckinBanner";
+import { StudentBottomNav } from "@/components/StudentBottomNav";
 import { readCachedJson, writeCachedJson } from "@/lib/offline-cache";
 import { enqueueAction } from "@/lib/offline-queue";
 import { computeWorkoutStreak } from "@/lib/streaks";
@@ -256,6 +258,7 @@ const StudentDashboard = () => {
         <div className="max-w-4xl mx-auto px-3 sm:px-4 py-3 flex items-center justify-between">
           <p className="text-sm font-medium text-muted-foreground">{student.plan}</p>
           <div className="flex items-center gap-2">
+            <NotificationBell />
             <Button
               variant="ghost"
               size="sm"
@@ -308,7 +311,7 @@ const StudentDashboard = () => {
         onAvatarChange={setAvatarUrl}
       />
 
-      <main className="max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-5 sm:space-y-6">
+      <main className="max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-5 sm:space-y-6 pb-24 md:pb-6">
         {/* Profile */}
         <div className="flex flex-col items-center gap-2">
           <button onClick={() => setAvatarDialogOpen(true)} className="focus:outline-none hover-scale relative group">
@@ -606,6 +609,7 @@ const StudentDashboard = () => {
         )}
         <WarmupCalculator />
       </main>
+      <StudentBottomNav />
     </div>
   );
 };

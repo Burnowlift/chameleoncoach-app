@@ -11,6 +11,7 @@ import { Loader2, History, Search, Dumbbell, TrendingUp, AlertCircle, ArrowLeft,
 import type { Student, WorkoutSession } from "@/lib/mock-data";
 import { formatKg } from "@/lib/utils";
 import { readCachedJson, writeCachedJson } from "@/lib/offline-cache";
+import { StudentBottomNav } from "@/components/StudentBottomNav";
 import { toast } from "sonner";
 
 const dayFormatter = new Intl.DateTimeFormat("pt-BR", {
@@ -395,6 +396,7 @@ const StudentHistory = () => {
           </p>
         )}
       </main>
+      <StudentBottomNav />
     </div>
   );
 };
