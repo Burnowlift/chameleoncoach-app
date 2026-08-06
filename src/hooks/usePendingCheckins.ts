@@ -18,6 +18,15 @@ export function usePendingCheckins() {
     async function fetchPending() {
       setLoading(true);
       try {
+        // Sincroniza a janela dos check-ins de todos os alunos (sábado →
+        // segunda). Best-effort: o painel funciona mesmo se falhar.
+        const { error: syncError } = await supabase.rpc("fn_sync_weekly_checkins", {
+          p_student_id: null,
+        });
+        if (syncError) {
+          console.warn("fn_sync_weekly_checkins:", syncError.message);
+        }
+
         const { data, error } = await supabase
           .from("weekly_checkins")
           .select(`

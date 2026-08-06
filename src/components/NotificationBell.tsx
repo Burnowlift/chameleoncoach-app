@@ -3,7 +3,7 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { usePushSubscription } from "@/hooks/usePushSubscription";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { Bell, BellOff, BellRing, CheckCheck, Loader2, MessageSquare, ClipboardCheck, Dumbbell, Trophy } from "lucide-react";
+import { Bell, BellOff, BellRing, CheckCheck, Loader2, MessageSquare, ClipboardCheck, Dumbbell, Trophy, CalendarClock } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,7 @@ const TYPE_ICON: Record<string, React.ComponentType<{ className?: string }>> = {
   anamnese_completed: Dumbbell,
   podium: Trophy,
   message: MessageSquare,
+  training_expiry: CalendarClock,
 };
 
 export function NotificationBell() {

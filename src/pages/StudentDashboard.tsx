@@ -28,7 +28,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Dumbbell, LogOut, User, Loader2, ArrowLeft, MessageSquare, Weight, Send, Calendar, Check, Trash2, Play, CheckCircle2, Camera, Gauge, X, Timer, Trophy, TrendingUp, Download, History, ArrowUp, ArrowDown, Flame, BarChart3, Medal } from "lucide-react";
+import { Dumbbell, LogOut, User, Loader2, ArrowLeft, MessageSquare, Weight, Send, Calendar, Check, Trash2, Play, CheckCircle2, Camera, Gauge, X, Timer, Trophy, TrendingUp, Download, History, ArrowUp, ArrowDown, Flame, BarChart3, Medal, ClipboardCheck } from "lucide-react";
 import { NotificationBell } from "@/components/NotificationBell";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { RmEvolutionChart } from "@/components/RmEvolutionChart";
@@ -50,11 +50,12 @@ import { readCachedJson, writeCachedJson } from "@/lib/offline-cache";
 import { enqueueAction } from "@/lib/offline-queue";
 import { computeWorkoutStreak } from "@/lib/streaks";
 import { useAchievements } from "@/hooks/useAchievements";
-import { VolumeChart } from "@/components/VolumeChart";
+import { useCheckins } from "@/hooks/useCheckins";
+import { monthlyCheckinProgress } from "@/lib/checkin-metrics";
 import { RpeTrendChart } from "@/components/RpeTrendChart";
 import { WeeklyGoalRing } from "@/components/WeeklyGoalRing";
 import { AchievementsGrid } from "@/components/AchievementsGrid";
-import { startOfWeek, subWeeks, endOfWeek, isWithinInterval } from "date-fns";
+import { startOfWeek, endOfWeek, isWithinInterval } from "date-fns";
 
 type View =
   | { type: "blocks" }
@@ -123,6 +124,14 @@ const StudentDashboard = () => {
   const { records: rmRecords, loading: rmLoading, addRecord: addRmRecord, deleteRecord: deleteRmRecord, refetch: refetchRm } = useRmHistory(student?.id);
   useRmBackfill(student?.id, refetchRm);
   const { achievements } = useAchievements(logs, rmRecords);
+  const { pending: pendingCheckin, history: checkinHistory } = useCheckins(student?.id);
+
+  // Percentual de check-ins respondidos no mês (disponibilizados × respondidos)
+  const checkinProgress = useMemo(
+    () => monthlyCheckinProgress([...(pendingCheckin ? [pendingCheckin] : []), ...checkinHistory]),
+    [pendingCheckin, checkinHistory],
+  );
+
   const [completedWeeks, setCompletedWeeks] = useState<{ blockId: string; weekNumber: number }[]>([]);
 
   // Fetch completed weeks
@@ -228,18 +237,6 @@ const StudentDashboard = () => {
 
   const thisWeekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
   const thisWeekEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
-  const lastWeekStart = startOfWeek(subWeeks(new Date(), 1), { weekStartsOn: 1 });
-  const lastWeekEnd = endOfWeek(subWeeks(new Date(), 1), { weekStartsOn: 1 });
-
-  const volumeInInterval = (start: Date, end: Date) => logs
-    .filter(l => isWithinInterval(new Date(l.createdAt), { start, end }))
-    .reduce((acc, l) => acc + (l.setsData && l.setsData.length > 0
-      ? l.setsData.reduce((s, set) => s + (set.weight || 0) * (set.reps || 0), 0)
-      : l.weight || 0), 0);
-
-  const volumeThisWeek = Math.round(volumeInInterval(thisWeekStart, thisWeekEnd));
-  const volumeLastWeek = Math.round(volumeInInterval(lastWeekStart, lastWeekEnd));
-  const volumeDelta = volumeLastWeek > 0 ? volumeThisWeek - volumeLastWeek : null;
 
   const sessionsThisWeek = new Set(
     logs
@@ -354,16 +351,15 @@ const StudentDashboard = () => {
               </CardContent></Card>
               <Card><CardContent className="p-4">
                 <div className="flex items-center gap-2 mb-1">
-                  <Weight className="h-4 w-4 text-primary" />
-                  <p className="text-xs text-muted-foreground">Volume da semana</p>
+                  <ClipboardCheck className="h-4 w-4 text-primary" />
+                  <p className="text-xs text-muted-foreground">Check-ins no mês</p>
                 </div>
-                <p className="text-xl font-bold">{formatKg(volumeThisWeek)}</p>
-                {volumeDelta != null && (
-                  <p className={`text-[11px] font-semibold ${volumeDelta >= 0 ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400"}`}>
-                    {volumeDelta >= 0 ? <ArrowUp className="h-3 w-3 inline" /> : <ArrowDown className="h-3 w-3 inline" />}
-                    {formatKg(Math.abs(volumeDelta))} vs semana passada
-                  </p>
-                )}
+                <p className="text-xl font-bold">{checkinProgress.pct}%</p>
+                <p className="text-[11px] text-muted-foreground">
+                  {checkinProgress.total === 0
+                    ? "Nenhum check-in este mês"
+                    : `${checkinProgress.responded} de ${checkinProgress.total} respondidos`}
+                </p>
               </CardContent></Card>
               <Card><CardContent className="p-4">
                 <div className="flex items-center gap-2 mb-1">
@@ -599,20 +595,11 @@ const StudentDashboard = () => {
             <AccordionTrigger className="bg-card px-4 py-3 rounded-lg border border-border/60 hover:bg-muted/50 data-[state=open]:rounded-b-none transition-all">
               <div className="flex items-center gap-2">
                 <BarChart3 className="h-4 w-4 text-primary" />
-                <span className="font-semibold text-sm">Volume e RPE por semana</span>
+                <span className="font-semibold text-sm">RPE por semana</span>
               </div>
             </AccordionTrigger>
             <AccordionContent className="pt-3">
-              <div className="space-y-6">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Volume semanal</p>
-                  <VolumeChart logs={logs} />
-                </div>
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">RPE médio semanal</p>
-                  <RpeTrendChart logs={logs} />
-                </div>
-              </div>
+              <RpeTrendChart logs={logs} />
             </AccordionContent>
           </AccordionItem>
         </Accordion>

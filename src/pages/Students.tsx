@@ -32,6 +32,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { isAdminCoach } from "@/lib/admin";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useStudentsBlockEnd } from "@/hooks/useStudentsBlockEnd";
+import { useTrainingExpiryNotifier } from "@/hooks/useTrainingExpiryNotifier";
 
 import { supabase } from "@/integrations/supabase/client";
 
@@ -266,6 +267,7 @@ const Students = () => {
   const { user } = useAuth();
   const isAdmin = isAdminCoach(user?.email);
   const feedback = useStudentFeedback();
+  useTrainingExpiryNotifier();
   const [rmStudentId, setRmStudentId] = useState<string | undefined>(undefined);
   const { records: rmRecords, loading: rmLoading, deleteRecord: deleteRmRecord, refetch: refetchRm } = useRmHistory(rmStudentId);
   useRmBackfill(rmStudentId, refetchRm);

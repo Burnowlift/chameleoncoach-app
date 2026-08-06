@@ -66,6 +66,15 @@ export function useCheckins(studentId: string | undefined) {
   const fetchCheckins = useCallback(async () => {
     if (!studentId) { setLoading(false); return; }
 
+    // Sincroniza a janela do check-in (gera no sábado 08:00 e encerra na
+    // segunda-feira 23:59). Best-effort: falhas não quebram a consulta.
+    const { error: syncError } = await supabase.rpc("fn_sync_weekly_checkins", {
+      p_student_id: studentId,
+    });
+    if (syncError) {
+      console.warn("fn_sync_weekly_checkins:", syncError.message);
+    }
+
     // Busca check-in pendente
     const { data: pendingData } = await supabase
       .from("weekly_checkins")
@@ -96,6 +105,13 @@ export function useCheckins(studentId: string | undefined) {
     checkinId: string,
     responses: Partial<CheckinData>
   ) => {
+    // Reforça a regra da janela: após a segunda-feira 23:59 o check-in
+    // é encerrado e não pode mais ser respondido.
+    if (pending && new Date(pending.expires_at).getTime() < Date.now()) {
+      throw new Error(
+        "Prazo encerrado: este check-in só pode ser respondido até o final da segunda-feira.",
+      );
+    }
     const { error } = await supabase
       .from("weekly_checkins")
       .update({
@@ -120,6 +136,15 @@ export function useStudentCheckins(studentId: string | undefined) {
 
   const fetchCheckins = useCallback(async () => {
     if (!studentId) { setLoading(false); return; }
+
+    // Sincroniza a janela do check-in do aluno (best-effort, idempotente)
+    const { error: syncError } = await supabase.rpc("fn_sync_weekly_checkins", {
+      p_student_id: studentId,
+    });
+    if (syncError) {
+      console.warn("fn_sync_weekly_checkins:", syncError.message);
+    }
+
     const { data } = await supabase
       .from("weekly_checkins")
       .select("*")
