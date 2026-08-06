@@ -25,8 +25,11 @@ serve(async (req) => {
     // ── Validações ──────────────────────────────────────────
     if (!name?.trim()) return json({ error: "Nome é obrigatório." }, 400);
     if (!email?.trim()) return json({ error: "E-mail é obrigatório." }, 400);
-    if (!password || password.length < 6) {
-      return json({ error: "A senha precisa ter pelo menos 6 caracteres." }, 400);
+    if (!password || password.length < 8) {
+      return json({ error: "A senha precisa ter pelo menos 8 caracteres, com letras e números." }, 400);
+    }
+    if (!/[a-zA-Z]/.test(password) || !/\d/.test(password)) {
+      return json({ error: "A senha precisa ter letras e números." }, 400);
     }
     if (!cpf?.trim()) return json({ error: "CPF é obrigatório." }, 400);
     if (!phone?.trim()) return json({ error: "Telefone é obrigatório." }, 400);

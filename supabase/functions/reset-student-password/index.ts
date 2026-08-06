@@ -25,8 +25,11 @@ serve(async (req) => {
     if (!studentId || !password) {
       return json({ error: "studentId e password são obrigatórios" }, 400);
     }
-    if (typeof password !== "string" || password.length < 6) {
-      return json({ error: "A senha precisa ter pelo menos 6 caracteres." }, 400);
+    if (typeof password !== "string" || password.length < 8) {
+      return json({ error: "A senha precisa ter pelo menos 8 caracteres, com letras e números." }, 400);
+    }
+    if (!/[a-zA-Z]/.test(password) || !/\d/.test(password)) {
+      return json({ error: "A senha precisa ter letras e números." }, 400);
     }
 
     const supabaseAdmin = createClient(

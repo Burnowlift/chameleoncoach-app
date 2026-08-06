@@ -12,6 +12,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Progress } from "@/components/ui/progress";
 import { Loader2, ArrowLeft, ArrowRight, CheckCircle2, Upload, AlertCircle } from "lucide-react";
 import AnimatedPage from "@/components/AnimatedPage";
+import { SignedAnamneseImg } from "@/components/SignedAnamneseFile";
 import { Helmet } from "react-helmet-async";
 import { toast } from "sonner";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
@@ -506,7 +507,7 @@ const StudentAnamnese = () => {
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-4">
                       {formData.fotos.map((foto, index) => (
                         <div key={index} className="relative group rounded-md overflow-hidden border">
-                          <img src={foto} alt={`Sua foto ${index + 1}`} className="w-full h-32 object-cover" />
+                          <SignedAnamneseImg src={foto} alt={`Sua foto ${index + 1}`} className="w-full h-32 object-cover" />
                           <button
                             className="absolute top-1 right-1 bg-black/60 hover:bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                             onClick={(e) => {

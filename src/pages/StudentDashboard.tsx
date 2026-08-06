@@ -28,7 +28,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Dumbbell, LogOut, User, Loader2, ArrowLeft, MessageSquare, Weight, Send, Calendar, Check, Trash2, Play, CheckCircle2, Camera, Gauge, X, Timer, Trophy, TrendingUp } from "lucide-react";
+import { Dumbbell, LogOut, User, Loader2, ArrowLeft, MessageSquare, Weight, Send, Calendar, Check, Trash2, Play, CheckCircle2, Camera, Gauge, X, Timer, Trophy, TrendingUp, Download, History, ArrowUp, ArrowDown } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { RmEvolutionChart } from "@/components/RmEvolutionChart";
 import { RpeReferenceTable } from "@/components/RpeReferenceTable";
@@ -44,6 +44,8 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { sbdTotal, formatKg } from "@/lib/utils";
 import { CheckinBanner } from "@/components/CheckinBanner";
+import { readCachedJson, writeCachedJson } from "@/lib/offline-cache";
+import { enqueueAction } from "@/lib/offline-queue";
 
 type View =
   | { type: "blocks" }
@@ -63,13 +65,13 @@ const StudentDashboard = () => {
   // Fetch student profile
   const refreshStudent = useCallback(async () => {
     if (!user) return;
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("students")
       .select("*")
       .eq("user_id", user.id)
       .maybeSingle();
 
-    if (data) {
+    if (!error && data) {
       setStudent({
         id: data.id, name: data.name, email: data.email,
         phone: data.phone || undefined, state: data.state || undefined,
@@ -80,6 +82,22 @@ const StudentDashboard = () => {
         deadlift1RM: Number(data.deadlift_1rm), renewalDay: data.renewal_day || undefined,
       });
       setAvatarUrl(data.avatar || null);
+      writeCachedJson(`student:${user.id}`, { student: data, avatar: data.avatar || null });
+    } else if (error) {
+      const cached = readCachedJson<{ student: any; avatar: string | null }>(`student:${user.id}`);
+      if (cached?.student) {
+        const data = cached.student;
+        setStudent({
+          id: data.id, name: data.name, email: data.email,
+          phone: data.phone || undefined, state: data.state || undefined,
+          plan: data.plan, planValue: Number(data.plan_value),
+          status: data.status as Student["status"],
+          joinedAt: data.joined_at, paymentDueDate: data.payment_due_date || "",
+          squat1RM: Number(data.squat_1rm), bench1RM: Number(data.bench_1rm),
+          deadlift1RM: Number(data.deadlift_1rm), renewalDay: data.renewal_day || undefined,
+        });
+        setAvatarUrl(cached.avatar);
+      }
     }
     setLoading(false);
   }, [user]);
@@ -100,12 +118,19 @@ const StudentDashboard = () => {
   // Fetch completed weeks
   useEffect(() => {
     if (!student) return;
+    const key = `completed_weeks:${student.id}`;
     supabase
       .from("completed_weeks")
       .select("block_id, week_number")
       .eq("student_id", student.id)
-      .then(({ data }) => {
-        if (data) setCompletedWeeks(data.map(d => ({ blockId: d.block_id, weekNumber: d.week_number })));
+      .then(({ data, error }) => {
+        if (!error && data) {
+          setCompletedWeeks(data.map(d => ({ blockId: d.block_id, weekNumber: d.week_number })));
+          writeCachedJson(key, data.map(d => ({ blockId: d.block_id, weekNumber: d.week_number })));
+        } else if (error) {
+          const cached = readCachedJson<{ blockId: string; weekNumber: number }[]>(key);
+          if (cached) setCompletedWeeks(cached);
+        }
       });
   }, [student]);
 
@@ -115,16 +140,35 @@ const StudentDashboard = () => {
   const toggleWeekCompleted = async (blockId: string, week: number) => {
     if (!student) return;
     const completed = isWeekCompleted(blockId, week);
+    const applyLocal = (done: boolean) => {
+      setCompletedWeeks(prev => {
+        const next = done
+          ? [...prev.filter(cw => !(cw.blockId === blockId && cw.weekNumber === week)), { blockId, weekNumber: week }]
+          : prev.filter(cw => !(cw.blockId === blockId && cw.weekNumber === week));
+        writeCachedJson(`completed_weeks:${student.id}`, next);
+        return next;
+      });
+    };
+    if (!navigator.onLine) {
+      await enqueueAction({
+        type: "toggle-week",
+        payload: { studentId: student.id, blockId, weekNumber: week, completed: !completed },
+        createdAt: new Date().toISOString(),
+      });
+      applyLocal(!completed);
+      toast.info("Salvo offline — será sincronizado quando a conexão voltar.");
+      return;
+    }
     if (completed) {
       await supabase.from("completed_weeks").delete()
         .eq("student_id", student.id).eq("block_id", blockId).eq("week_number", week);
-      setCompletedWeeks(prev => prev.filter(cw => !(cw.blockId === blockId && cw.weekNumber === week)));
+      applyLocal(false);
       toast.error("Semana desmarcada!");
     } else {
       await supabase.from("completed_weeks").insert({
         student_id: student.id, block_id: blockId, week_number: week,
       });
-      setCompletedWeeks(prev => [...prev, { blockId, weekNumber: week }]);
+      applyLocal(true);
       toast.success("Semana concluída!");
     }
   };
@@ -175,6 +219,26 @@ const StudentDashboard = () => {
         <div className="max-w-4xl mx-auto px-3 sm:px-4 py-3 flex items-center justify-between">
           <p className="text-sm font-medium text-muted-foreground">{student.plan}</p>
           <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-2 text-muted-foreground"
+              onClick={() => navigate("/aluno/historico")}
+              title="Histórico de treinos"
+            >
+              <History className="h-4 w-4" />
+              <span className="hidden sm:inline">Histórico</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-2 text-muted-foreground"
+              onClick={() => window.dispatchEvent(new Event("chameleon:open-install-dialog"))}
+              title="Instalar o app"
+            >
+              <Download className="h-4 w-4" />
+              <span className="hidden sm:inline">Instalar app</span>
+            </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground">
@@ -704,6 +768,10 @@ function SessionsView({ student, block, week, logs, notes, onUpsertLog, onAddNot
               session.exercises.map(ex => {
                 const log = getLog(session.id, ex.id);
                 const key = `${session.id}-${ex.id}`;
+                const previousLogs = logs
+                  .filter(l => l.exerciseId === ex.id && !(l.blockId === block.id && l.weekNumber === week) && l.completed)
+                  .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+                const lastLog = previousLogs[0];
                 return (
                   <div key={ex.id} className={`p-3 rounded-lg border transition-colors ${log?.completed ? "bg-primary/5 border-primary/20" : "bg-muted/30 border-border"}`}>
                     <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
@@ -729,6 +797,23 @@ function SessionsView({ student, block, week, logs, notes, onUpsertLog, onAddNot
                         {ex.percentage && ` ${ex.percentage}`}
                       </span>
                     </div>
+                    {lastLog && (
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-2 text-[11px] text-muted-foreground">
+                        <span>
+                          Última vez:{" "}
+                          <strong className="font-semibold">{formatKg(lastLog.weight)}</strong>
+                          {(lastLog.setsData?.length ?? 0) > 0 && <> × {lastLog.setsData!.length} séries</>}
+                          {lastLog.actualRpe != null && <> @RPE {lastLog.actualRpe}</>}
+                        </span>
+                        <span>· {format(new Date(lastLog.createdAt), "dd/MM")}</span>
+                        {log?.weight != null && log.weight !== lastLog.weight && (
+                          <span className={log.weight > lastLog.weight ? "text-green-600 dark:text-green-400 font-semibold" : "text-amber-600 dark:text-amber-400 font-semibold"}>
+                            {log.weight > lastLog.weight ? <ArrowUp className="h-3 w-3 inline" /> : <ArrowDown className="h-3 w-3 inline" />}
+                            {formatKg(Math.abs(log.weight - lastLog.weight))}
+                          </span>
+                        )}
+                      </div>
+                    )}
                     <div className="space-y-2">
                       <div className="space-y-2">
                         {Array.from({ length: Number(ex.sets) || 1 }).map((_, i) => {

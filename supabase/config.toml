@@ -1,5 +1,11 @@
 project_id = "qwyyqcjqyrqxgcnwmthj"
 
+[auth]
+site_url = "https://chameleoncoach.com.br"
+additional_redirect_urls = ["https://chameleoncoach.com.br/aluno/reset-password"]
+enable_signup = false
+enable_confirmations = true
+
 [functions.finance-chat]
 verify_jwt = false
 

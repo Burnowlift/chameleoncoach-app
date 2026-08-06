@@ -13,6 +13,7 @@ export interface RmRecord {
 }
 
 import { calculate1RM, type LiftType } from "@/lib/rpe-tables";
+import { enqueueAction } from "@/lib/offline-queue";
 
 /** Calcula 1RM via tabela RPE × Reps. */
 export function calculate1RMFromRpe(
@@ -67,6 +68,34 @@ export function useRmHistory(studentId: string | undefined) {
   }, [studentId, fetch]);
 
   const addRecord = async (record: Omit<RmRecord, "id" | "recordedAt">) => {
+    if (!navigator.onLine) {
+      await enqueueAction({
+        type: "add-rm-record",
+        payload: {
+          studentId: record.studentId,
+          exerciseId: record.exerciseId,
+          sbdType: record.sbdType,
+          weight: record.weight,
+          reps: record.reps,
+          estimated1rm: record.estimated1rm,
+        },
+        createdAt: new Date().toISOString(),
+      });
+      setRecords(prev => {
+        const next = [...prev.filter(x => !(x.exerciseId === record.exerciseId && x.sbdType === record.sbdType)), {
+          id: `local-rm-${Date.now()}`,
+          studentId: record.studentId,
+          exerciseId: record.exerciseId,
+          sbdType: record.sbdType,
+          weight: record.weight,
+          reps: record.reps,
+          estimated1rm: record.estimated1rm,
+          recordedAt: new Date().toISOString(),
+        }];
+        return next;
+      });
+      return;
+    }
     // 1. Verificar se já existe um registro de 1RM para este aluno, exercício e sbdType
     const { data: existingRecords } = await supabase
       .from("rm_history")

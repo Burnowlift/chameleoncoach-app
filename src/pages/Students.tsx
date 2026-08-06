@@ -330,8 +330,8 @@ const Students = () => {
       toast.error("Defina uma senha de acesso para o aluno.");
       return;
     }
-    if (passwordToSet.length < 6) {
-      toast.error("A senha de login deve ter pelo menos 6 caracteres.");
+    if (passwordToSet.length < 8) {
+      toast.error("A senha deve ter pelo menos 8 caracteres.");
       return;
     }
 
@@ -505,8 +505,8 @@ const Students = () => {
       toast.error("Defina uma senha para o aluno.");
       return;
     }
-    if (loginPassword.length < 6) {
-      toast.error("A senha deve ter pelo menos 6 caracteres.");
+    if (loginPassword.length < 8) {
+      toast.error("A senha deve ter pelo menos 8 caracteres.");
       return;
     }
     setCreatingLogin(true);
@@ -552,8 +552,8 @@ const Students = () => {
       toast.error("Defina uma nova senha.");
       return;
     }
-    if (loginPassword.length < 6) {
-      toast.error("A senha deve ter pelo menos 6 caracteres.");
+    if (loginPassword.length < 8) {
+      toast.error("A senha deve ter pelo menos 8 caracteres.");
       return;
     }
     setResettingPassword(true);
@@ -966,7 +966,7 @@ const Students = () => {
               <Input
                 id="student-password"
                 type="password"
-                placeholder="Senha simples (mín. 6 caracteres)"
+                placeholder="Senha simples (mín. 8 caracteres)"
                 value={newLoginPassword}
                 onChange={(e) => setNewLoginPassword(e.target.value)}
                 autoComplete="new-password"
@@ -1169,7 +1169,7 @@ const Students = () => {
                       </div>
                     </div>
                     <p className="text-xs text-muted-foreground pt-1">
-                      Redefinir senha (mín. 6 caracteres). A senha atual não pode ser exibida — apenas substituída.
+                      Redefinir senha (mín. 8 caracteres). A senha atual não pode ser exibida — apenas substituída.
                     </p>
                     <div className="flex gap-2">
                       <div className="relative flex-1">
@@ -1209,7 +1209,7 @@ const Students = () => {
                       <div className="relative flex-1">
                         <Input
                           type={showLoginPassword ? "text" : "password"}
-                          placeholder="Senha simples (mín. 6 caracteres)"
+                          placeholder="Senha simples (mín. 8 caracteres)"
                           value={loginPassword}
                           onChange={(e) => setLoginPassword(e.target.value)}
                           className="pr-10"

@@ -12,6 +12,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 import { useAnamnese } from "@/hooks/useAnamnese";
+import { SignedAnamneseImg, SignedAnamneseLink, SignedAnamnesePhoto } from "@/components/SignedAnamneseFile";
 import { useStudentCheckins } from "@/hooks/useCheckins";
 import { StudentWorkoutPage } from "@/components/StudentWorkoutDialog";
 import { StudentMobilityContent } from "@/pages/StudentMobility";
@@ -231,9 +232,9 @@ export default function StudentProfile() {
                         <p className="font-medium mt-1">{anamnese.limitacao_cirurgia || "Nenhuma relatada."}</p>
                       </div>
                       {anamnese.limitacao_arquivo_url && (
-                        <a href={anamnese.limitacao_arquivo_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 px-3 py-1.5 rounded-md transition-colors">
+                        <SignedAnamneseLink href={anamnese.limitacao_arquivo_url} className="inline-flex items-center gap-2 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 px-3 py-1.5 rounded-md transition-colors">
                           <Download className="h-3 w-3" /> Ver exame anexado
-                        </a>
+                        </SignedAnamneseLink>
                       )}
                     </CardContent>
                   </Card>
@@ -283,9 +284,7 @@ export default function StudentProfile() {
                       <CardContent>
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                           {anamnese.fotos.map((foto, index) => (
-                            <a key={index} href={foto} target="_blank" rel="noopener noreferrer" className="block rounded-md overflow-hidden border hover:opacity-90 transition-opacity">
-                              <img src={foto} alt={`Foto ${index + 1}`} className="w-full h-40 object-cover" />
-                            </a>
+                            <SignedAnamnesePhoto key={index} path={foto} alt={`Foto ${index + 1}`} />
                           ))}
                         </div>
                       </CardContent>

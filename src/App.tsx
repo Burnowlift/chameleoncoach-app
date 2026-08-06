@@ -1,10 +1,14 @@
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { InstallAppDialog } from "@/components/InstallAppDialog";
+import { OfflineManager } from "@/components/OfflineManager";
+import { OfflineProvider } from "@/hooks/useOfflineStatus";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
+import { useState } from "react";
 import { CoachRoute } from "@/components/CoachRoute";
 import { AdminRoute } from "@/components/AdminRoute";
 import { MenuRoute } from "@/components/MenuRoute";
@@ -31,6 +35,7 @@ import Ranking from "./pages/Ranking.tsx";
 import StudentLogin from "./pages/StudentLogin.tsx";
 import StudentRegister from "./pages/StudentRegister.tsx";
 import StudentDashboard from "./pages/StudentDashboard.tsx";
+import StudentHistory from "./pages/StudentHistory.tsx";
 import StudentAnamnese from "./pages/StudentAnamnese.tsx";
 import StudentCheckin from "./pages/StudentCheckin.tsx";
 import StudentCheckinHistory from "./pages/StudentCheckinHistory.tsx";
@@ -40,14 +45,19 @@ import { JaguarTheme } from "@/components/JaguarTheme";
 
 const queryClient = new QueryClient();
 
-const App = () => (
+const App = () => {
+  const [installDialogOpen, setInstallDialogOpen] = useState(false);
+  return (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
-          <Routes>
+        <InstallAppDialog open={installDialogOpen} onOpenChange={setInstallDialogOpen} />
+        <OfflineProvider>
+          <OfflineManager />
+          <BrowserRouter>
+            <Routes>
             {/* Landing */}
             <Route path="/" element={<LandingPage />} />
             
@@ -77,6 +87,7 @@ const App = () => (
             <Route path="/aluno/anamnese" element={<JaguarTheme><StudentRoute skipAnamneseCheck><StudentAnamnese /></StudentRoute></JaguarTheme>} />
             <Route path="/aluno/checkin" element={<JaguarTheme><StudentRoute><StudentCheckin /></StudentRoute></JaguarTheme>} />
             <Route path="/aluno/checkins" element={<JaguarTheme><StudentRoute><StudentCheckinHistory /></StudentRoute></JaguarTheme>} />
+            <Route path="/aluno/historico" element={<JaguarTheme><StudentRoute><StudentHistory /></StudentRoute></JaguarTheme>} />
             <Route path="/aluno" element={<JaguarTheme><StudentRoute><StudentDashboard /></StudentRoute></JaguarTheme>} />
 
             {/* Password reset */}
@@ -84,10 +95,12 @@ const App = () => (
             
             <Route path="*" element={<NotFound />} />
           </Routes>
-        </BrowserRouter>
+          </BrowserRouter>
+        </OfflineProvider>
       </TooltipProvider>
     </AuthProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;
