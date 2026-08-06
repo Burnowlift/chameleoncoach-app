@@ -96,10 +96,21 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
     window.addEventListener(QUEUE_CHANGED_EVENT, handleQueueChanged);
+
+    // Mensagem do service worker (Background Sync / volta de conexão)
+    const handleSwMessage = (event: MessageEvent) => {
+      if (event.data?.type === "chameleon:sync") {
+        setIsOnline(true);
+        drainQueue();
+      }
+    };
+    navigator.serviceWorker?.addEventListener?.("message", handleSwMessage);
+
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
       window.removeEventListener(QUEUE_CHANGED_EVENT, handleQueueChanged);
+      navigator.serviceWorker?.removeEventListener?.("message", handleSwMessage);
     };
   }, [refreshCount, drainQueue]);
 

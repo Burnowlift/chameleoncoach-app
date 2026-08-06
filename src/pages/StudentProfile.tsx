@@ -15,6 +15,7 @@ import { useAnamnese } from "@/hooks/useAnamnese";
 import { SignedAnamneseImg, SignedAnamneseLink, SignedAnamnesePhoto } from "@/components/SignedAnamneseFile";
 import { useStudentCheckins } from "@/hooks/useCheckins";
 import { StudentWorkoutPage } from "@/components/StudentWorkoutDialog";
+import { StudentHistoryTimeline } from "@/components/StudentHistoryTimeline";
 import { StudentMobilityContent } from "@/pages/StudentMobility";
 import { StudentNotesTab } from "@/components/StudentNotesTab";
 import { BodyWeightHistorySection } from "@/components/BodyWeightHistorySection";
@@ -435,7 +436,22 @@ export default function StudentProfile() {
           </TabsContent>
 
           {/* ABA TREINOS */}
-          <TabsContent value="treinos" className="mt-6">
+          <TabsContent value="treinos" className="mt-6 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                  Histórico de Treinos
+                </CardTitle>
+                <CardDescription>
+                  Linha do tempo consolidada das semanas com execução registrada — aderência, volume e atalho para a semana.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <StudentHistoryTimeline studentId={studentId!} />
+              </CardContent>
+            </Card>
+
             <div className="border border-border rounded-lg bg-card overflow-hidden">
               <StudentWorkoutPage student={student} onBack={() => navigate("/students")} />
             </div>

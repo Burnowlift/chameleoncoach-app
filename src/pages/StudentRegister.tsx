@@ -337,7 +337,7 @@ const StudentRegister = () => {
 
                 {/* Sexo */}
                 <div className="space-y-2">
-                  <Label htmlFor="reg-sex">Sexo Biológico</Label>
+                  <Label htmlFor="reg-sex">Sexo</Label>
                   <Select value={sex} onValueChange={(v) => setSex(v as "M" | "F")} disabled={loading}>
                     <SelectTrigger id="reg-sex" className="w-full">
                       <SelectValue placeholder="Selecione..." />

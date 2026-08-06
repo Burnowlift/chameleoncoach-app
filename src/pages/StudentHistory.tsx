@@ -19,6 +19,30 @@ const dayFormatter = new Intl.DateTimeFormat("pt-BR", {
   month: "long",
 });
 
+/** Mini-gráfico de tendência de cargas de um exercício (SVG puro). */
+function WeightSparkline({ points }: { points: number[] }) {
+  if (points.length < 2) return null;
+  const w = 56;
+  const h = 20;
+  const min = Math.min(...points);
+  const max = Math.max(...points);
+  const range = max - min || 1;
+  const coords = points.map((v, i) => [
+    (i / (points.length - 1)) * (w - 4) + 2,
+    h - 3 - ((v - min) / range) * (h - 6),
+  ]);
+  const d = coords.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+  const last = coords[coords.length - 1];
+  const up = points[points.length - 1] >= points[0];
+  const color = up ? "#22c55e" : "#f59e0b";
+  return (
+    <svg width={w} height={h} className="shrink-0" aria-hidden="true">
+      <path d={d} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
+      <circle cx={last[0]} cy={last[1]} r="2.5" fill={color} />
+    </svg>
+  );
+}
+
 const isSameDay = (a: Date, b: Date) =>
   a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 
@@ -190,6 +214,13 @@ const StudentHistory = () => {
     return prev ?? null;
   };
 
+  const weightSeriesFor = (log: ExerciseLog): number[] => {
+    return logs
+      .filter(l => l.exerciseId === log.exerciseId && l.createdAt <= log.createdAt && l.completed && l.weight > 0)
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+      .map(l => l.weight);
+  };
+
   if (authLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -320,7 +351,10 @@ const StudentHistory = () => {
                         return (
                           <div key={log.id} className="flex items-start justify-between gap-2 rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
                             <div className="min-w-0">
-                              <p className="text-sm font-medium">{exerciseName(log.exerciseId)}</p>
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-medium">{exerciseName(log.exerciseId)}</p>
+                                <WeightSparkline points={weightSeriesFor(log)} />
+                              </div>
                               <p className="text-xs text-muted-foreground">
                                 {log.setsData && log.setsData.length > 0
                                   ? `${log.setsData.length} série${log.setsData.length > 1 ? "s" : ""} · máx ${formatKg(Math.max(...log.setsData.map(s => s.weight || 0)))} · ${log.setsData[0].reps ? log.setsData[0].reps + " reps" : ""}`

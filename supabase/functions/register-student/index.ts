@@ -33,7 +33,7 @@ serve(async (req) => {
     }
     if (!cpf?.trim()) return json({ error: "CPF é obrigatório." }, 400);
     if (!phone?.trim()) return json({ error: "Telefone é obrigatório." }, 400);
-    if (!sex || (sex !== "M" && sex !== "F")) return json({ error: "Sexo biológico é obrigatório." }, 400);
+    if (!sex || (sex !== "M" && sex !== "F")) return json({ error: "Sexo é obrigatório." }, 400);
     if (!coachId?.trim()) return json({ error: "Link de cadastro inválido (treinador não identificado)." }, 400);
     if (!acceptedTerms) return json({ error: "Você precisa aceitar os termos para continuar." }, 400);
 

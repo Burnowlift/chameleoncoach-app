@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useTrainingBlocks } from "@/hooks/useTrainingBlocks";
 import { useExerciseLogs, type ExerciseSetLog } from "@/hooks/useExerciseLogs";
 import { useSessionNotes } from "@/hooks/useSessionNotes";
-import { useRmHistory, calculate1RMFromRpe } from "@/hooks/useRmHistory";
+import { useRmHistory, calculate1RMFromRpe, type RmRecord } from "@/hooks/useRmHistory";
 import { useRmBackfill } from "@/hooks/useRmBackfill";
 import { snapToTableRpe } from "@/lib/rpe-tables";
 
@@ -28,7 +28,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Dumbbell, LogOut, User, Loader2, ArrowLeft, MessageSquare, Weight, Send, Calendar, Check, Trash2, Play, CheckCircle2, Camera, Gauge, X, Timer, Trophy, TrendingUp, Download, History, ArrowUp, ArrowDown } from "lucide-react";
+import { Dumbbell, LogOut, User, Loader2, ArrowLeft, MessageSquare, Weight, Send, Calendar, Check, Trash2, Play, CheckCircle2, Camera, Gauge, X, Timer, Trophy, TrendingUp, Download, History, ArrowUp, ArrowDown, Flame, BarChart3, Medal } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { RmEvolutionChart } from "@/components/RmEvolutionChart";
 import { RpeReferenceTable } from "@/components/RpeReferenceTable";
@@ -46,6 +46,13 @@ import { sbdTotal, formatKg } from "@/lib/utils";
 import { CheckinBanner } from "@/components/CheckinBanner";
 import { readCachedJson, writeCachedJson } from "@/lib/offline-cache";
 import { enqueueAction } from "@/lib/offline-queue";
+import { computeWorkoutStreak } from "@/lib/streaks";
+import { computeAchievements } from "@/lib/achievements";
+import { VolumeChart } from "@/components/VolumeChart";
+import { RpeTrendChart } from "@/components/RpeTrendChart";
+import { WeeklyGoalRing } from "@/components/WeeklyGoalRing";
+import { AchievementsGrid } from "@/components/AchievementsGrid";
+import { startOfWeek, subWeeks, endOfWeek, isWithinInterval } from "date-fns";
 
 type View =
   | { type: "blocks" }
@@ -213,6 +220,36 @@ const StudentDashboard = () => {
   const total = sbdTotal(student.squat1RM, student.bench1RM, student.deadlift1RM);
   const currentBlock = view.type !== "blocks" ? blocks.find(b => b.id === view.blockId) : null;
 
+  // Gamificação + resumo da semana
+  const streak = computeWorkoutStreak(logs);
+  const achievements = computeAchievements(logs, rmRecords);
+
+  const thisWeekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+  const thisWeekEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
+  const lastWeekStart = startOfWeek(subWeeks(new Date(), 1), { weekStartsOn: 1 });
+  const lastWeekEnd = endOfWeek(subWeeks(new Date(), 1), { weekStartsOn: 1 });
+
+  const volumeInInterval = (start: Date, end: Date) => logs
+    .filter(l => isWithinInterval(new Date(l.createdAt), { start, end }))
+    .reduce((acc, l) => acc + (l.setsData && l.setsData.length > 0
+      ? l.setsData.reduce((s, set) => s + (set.weight || 0) * (set.reps || 0), 0)
+      : l.weight || 0), 0);
+
+  const volumeThisWeek = Math.round(volumeInInterval(thisWeekStart, thisWeekEnd));
+  const volumeLastWeek = Math.round(volumeInInterval(lastWeekStart, lastWeekEnd));
+  const volumeDelta = volumeLastWeek > 0 ? volumeThisWeek - volumeLastWeek : null;
+
+  const sessionsThisWeek = new Set(
+    logs
+      .filter(l => l.completed && isWithinInterval(new Date(l.createdAt), { start: thisWeekStart, end: thisWeekEnd }))
+      .map(l => `${l.blockId}-${l.weekNumber}-${l.sessionId}`),
+  ).size;
+
+  const goalTarget = blocks.length > 0 ? Math.max(...blocks.map(b => b.frequency || 0)) : 0;
+
+  const latestPr = rmRecords.reduce((best, r) => (!best || r.estimated1rm > best.estimated1rm ? r : best), null as RmRecord | null);
+  const prLiftLabel = latestPr ? { squat: "Agachamento", bench: "Supino", deadlift: "Terra" }[latestPr.sbdType] : null;
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card sticky top-0 z-10">
@@ -303,6 +340,63 @@ const StudentDashboard = () => {
         {view.type === "blocks" && (
           <>
             <CheckinBanner studentId={student.id} />
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <Card><CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <Dumbbell className="h-4 w-4 text-primary" />
+                  <p className="text-xs text-muted-foreground">Treinos na semana</p>
+                </div>
+                <p className="text-xl font-bold">{sessionsThisWeek}</p>
+              </CardContent></Card>
+              <Card><CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <Weight className="h-4 w-4 text-primary" />
+                  <p className="text-xs text-muted-foreground">Volume da semana</p>
+                </div>
+                <p className="text-xl font-bold">{formatKg(volumeThisWeek)}</p>
+                {volumeDelta != null && (
+                  <p className={`text-[11px] font-semibold ${volumeDelta >= 0 ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400"}`}>
+                    {volumeDelta >= 0 ? <ArrowUp className="h-3 w-3 inline" /> : <ArrowDown className="h-3 w-3 inline" />}
+                    {formatKg(Math.abs(volumeDelta))} vs semana passada
+                  </p>
+                )}
+              </CardContent></Card>
+              <Card><CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <Flame className={`h-4 w-4 ${streak.current > 0 ? "text-orange-500" : "text-muted-foreground"}`} />
+                  <p className="text-xs text-muted-foreground">Sequência</p>
+                </div>
+                <p className="text-xl font-bold">
+                  {streak.current > 0 ? `${streak.current} dia${streak.current > 1 ? "s" : ""} 🔥` : "—"}
+                </p>
+                {streak.best > 0 && streak.current !== streak.best && (
+                  <p className="text-[11px] text-muted-foreground">Recorde: {streak.best} dias</p>
+                )}
+              </CardContent></Card>
+              <Card><CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <Trophy className="h-4 w-4 text-amber-500" />
+                  <p className="text-xs text-muted-foreground">Maior 1RM</p>
+                </div>
+                {latestPr ? (
+                  <>
+                    <p className="text-xl font-bold">{formatKg(latestPr.estimated1rm)}</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {prLiftLabel} · {format(new Date(latestPr.recordedAt), "dd/MM/yy")}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-xl font-bold text-muted-foreground/40">—</p>
+                )}
+              </CardContent></Card>
+            </div>
+
+            {goalTarget > 0 && (
+              <Card><CardContent className="p-4">
+                <WeeklyGoalRing done={sessionsThisWeek} target={goalTarget} />
+              </CardContent></Card>
+            )}
 
             <div className="flex justify-center w-full mb-4">
               <div className="w-full max-w-xl">
@@ -409,6 +503,21 @@ const StudentDashboard = () => {
                   </div>
                 </AccordionContent>
               </AccordionItem>
+
+              <AccordionItem value="achievements" className="border-none">
+                <AccordionTrigger className="bg-card px-4 py-3 rounded-lg border border-border/60 hover:bg-muted/50 data-[state=open]:rounded-b-none transition-all">
+                  <div className="flex items-center gap-2">
+                    <Medal className="h-4 w-4 text-amber-500" />
+                    <span className="font-semibold text-sm">Conquistas</span>
+                    <span className="text-xs text-muted-foreground">
+                      ({achievements.filter(a => a.unlocked).length}/{achievements.length})
+                    </span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="pt-3">
+                  <AchievementsGrid achievements={achievements} />
+                </AccordionContent>
+              </AccordionItem>
             </Accordion>
           </>
         )}
@@ -468,6 +577,27 @@ const StudentDashboard = () => {
             </AccordionTrigger>
             <AccordionContent className="pt-3">
               <RmEvolutionChart records={rmRecords} loading={rmLoading} onDeleteRecord={deleteRmRecord} />
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="volume-rpe" className="border-none">
+            <AccordionTrigger className="bg-card px-4 py-3 rounded-lg border border-border/60 hover:bg-muted/50 data-[state=open]:rounded-b-none transition-all">
+              <div className="flex items-center gap-2">
+                <BarChart3 className="h-4 w-4 text-primary" />
+                <span className="font-semibold text-sm">Volume e RPE por semana</span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="pt-3">
+              <div className="space-y-6">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Volume semanal</p>
+                  <VolumeChart logs={logs} />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">RPE médio semanal</p>
+                  <RpeTrendChart logs={logs} />
+                </div>
+              </div>
             </AccordionContent>
           </AccordionItem>
         </Accordion>

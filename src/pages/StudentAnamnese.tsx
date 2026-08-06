@@ -209,7 +209,7 @@ const StudentAnamnese = () => {
                 </div>
 
                 <div className="space-y-3">
-                  <Label className="font-medium">Sexo biológico *</Label>
+                  <Label className="font-medium">Sexo *</Label>
                   <p className="text-xs text-muted-foreground">Usado para personalizar seu protocolo de treino e modelos de referência.</p>
                   <RadioGroup
                     value={formData.sexo || ""}

@@ -22,6 +22,19 @@ export async function enqueueAction(action: Omit<OfflineAction, "id">): Promise<
   const id = `${QUEUE_PREFIX}${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   await idbSet(id, action);
   emitQueueChanged();
+  requestBackgroundSync();
+}
+
+/** Registra o Background Sync para acordar o SW e pedir a drenagem da fila. */
+export function requestBackgroundSync(): void {
+  try {
+    if (!("serviceWorker" in navigator) || !("sync" in navigator)) return;
+    navigator.serviceWorker.ready
+      .then(reg => (reg as any).sync?.register("chameleon-sync"))
+      .catch(() => {});
+  } catch {
+    /* sem suporte (ex.: iOS Safari): a fila drena no evento online */
+  }
 }
 
 export async function listActions(): Promise<OfflineAction[]> {

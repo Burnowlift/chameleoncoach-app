@@ -1,6 +1,7 @@
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { InstallAppDialog } from "@/components/InstallAppDialog";
 import { OfflineManager } from "@/components/OfflineManager";
+import { PrCelebration } from "@/components/PrCelebration";
 import { OfflineProvider } from "@/hooks/useOfflineStatus";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
@@ -56,6 +57,7 @@ const App = () => {
         <InstallAppDialog open={installDialogOpen} onOpenChange={setInstallDialogOpen} />
         <OfflineProvider>
           <OfflineManager />
+          <PrCelebration />
           <BrowserRouter>
             <Routes>
             {/* Landing */}

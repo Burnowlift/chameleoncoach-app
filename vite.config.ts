@@ -35,19 +35,15 @@ export default defineConfig(({ mode }) => ({
           { src: "/pwa-maskable-512x512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
         ],
       },
+      strategies: "injectManifest",
+      filename: "sw.ts",
+      injectManifest: {
+        swSrc: path.resolve(__dirname, "public/sw.ts"),
+        globPatterns: ["**/*.{js,css,html,svg,png,ico,woff2}"],
+        maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
+      },
       workbox: {
         globPatterns: ["**/*.{js,css,html,svg,png,ico,woff2}"],
-        navigateFallback: "/index.html",
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/pub-.*\.r2\.dev\/.*/i,
-            handler: "CacheFirst",
-            options: {
-              cacheName: "chameleon-r2-images",
-              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 },
-            },
-          },
-        ],
       },
     }),
   ],
